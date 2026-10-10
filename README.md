@@ -99,7 +99,7 @@ Windows note: if documents can't be read automatically ("Automatic reading is no
 
 **Cline features used:** Plan/Act modes · `.clinerules/` (quality, workflow, stack rules) · Memory Bank (`memory-bank/`) · task specs (`tasks/NEXT.md`, `tasks/backlog/`) · the run log in `tasks/LOG.md` · the Cline CLI driven headlessly · **`@cline/sdk` inside the product**.
 
-**Honest attribution:** all application code (everything in `src/`, `scripts/` and the config files) was written by Cline. Claude wrote the specs and task files and reviewed every task. Das drove the product decisions and reviewed the rule packs against government sources; product research, the problem framing and the rule-pack research were done by Das with Claude, and corrections to the rule packs came from Das's review. `docs/README-draft.md` was not written by Cline; Cline adapted this README from it and checked every command, route and file name against the code.
+**Honest attribution:** all application code (everything in `src/`, `scripts/` and the config files) was written by Cline. Claude wrote the specs and task files and reviewed every task. Nilesh Das drove the product decisions and reviewed the rule packs against government sources; product research, the problem framing and the rule-pack research were done by Nilesh Das with Claude, and corrections to the rule packs came from Nilesh Das's review. `docs/README-draft.md` was not written by Cline; Cline adapted this README from it and checked every command, route and file name against the code.
 
 ## Limitations and future scope
 - Rule packs cover 3 schemes; Orunodoi 3.0 exclusions are provisional until a current official guideline is confirmed.
