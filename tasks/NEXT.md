@@ -1,16 +1,15 @@
-# NEXT TASK: T0, Memory Bank + scaffold
+# NEXT TASK: T1, core rule engine v2 (tests first)
 
-Idea chosen: **KaagazCheck**, which checks welfare documents before you apply (see `memory-bank/projectbrief.md`, `docs/PS.md`, `docs/schemes.md`, `docs/research.md`).
+T0 reviewed: tests pass (3/3), and the commit is in. Answer to your question: `docs/sample-notice-orunodoi-oct2026.md` is intentional; it is demo input for **T3** (not T4).
 
-Mode: PLAN first (a short plan we can show judges), then ACT.
+**Important changes since T0 (read before coding):**
+- `memory-bank/projectbrief.md` is now **v2** and `docs/schemes.md` is **rule packs v2** (provenance, verified vs provisional, two verdicts, defensive name matching, corrected widow pension 40–79 and ₹300).
+- The language changed: **Assamese default + English** (not Hindi).
 
-1. Read `docs/PS.md`, `docs/schemes.md`, `docs/research.md` and `memory-bank/projectbrief.md`.
-2. Create Memory Bank files, short and factual: `productContext.md`, `systemPatterns.md` (AI reads → rule engine decides → AI explains; one AI module; one DB writer), `techContext.md` (stack from .clinerules/03-stack.md), `activeContext.md`, `progress.md`.
-3. `git init` if needed. Scaffold a Next.js App Router app (TypeScript strict, Tailwind) IN THIS FOLDER, keeping `memory-bank/`, `tasks/`, `docs/`, `.clinerules/`, `.cline-runs/`.
-4. Add Vitest + fast-check, zod; npm scripts `test`, `build`, `lint`, `typecheck`.
-5. `.gitignore`: `.env.local`, `node_modules`, `.next`, `*.db`, but NOT `.cline-runs/`. Add `.env.example` with `CLINE_API_KEY=` and `CLINE_MODEL=`.
-6. A placeholder home page titled "KaagazCheck: कागज़ चेक" and one smoke test.
+## Step 0 (small, 5 min)
+- Refresh `memory-bank/productContext.md`, `systemPatterns.md` and `activeContext.md` so they match brief v2 (two verdicts, provenance, Assamese).
+- Switch the app title to "KaagazCheck: কাগজ চেক" with the tagline "Check before you apply" / "আবেদনৰ আগতে পৰীক্ষা কৰক", set `<html lang="as">`, and update the smoke test accordingly.
 
-**Done when:** `npm test` and `npm run build` pass, the Memory Bank exists, the first commit is made ("T0: scaffold + memory bank"), LOG.md updated.
+## Then do `tasks/backlog/T1-core-engine.md` exactly (it is already updated for v2).
 
-Next after this: `tasks/backlog/T1-core-engine.md`.
+**Done when:** everything in T1's "Done when" holds, plus Step 0 is done; LOG.md updated; committed "T1: core rule engine v2".

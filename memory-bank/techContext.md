@@ -13,7 +13,9 @@
 - Windows, PowerShell 5.1; the path contains a space (`C:\Dev\cline hackathon\build`). Use npm scripts and cross-platform Node code.
 - Node v24.21.0, npm 11.19.0, git 2.55.0.
 - Secrets only in `.env.local` (git-ignored): `CLINE_API_KEY`, `CLINE_MODEL` (e.g. `anthropic/claude-sonnet-5.5`, never a `:batch` model). The template is `.env.example`.
-- Write files containing Hindi with the editor tool (UTF-8), not PowerShell redirection.
+- Write files containing Assamese (or other non-Latin text) with the editor tool (UTF-8), not PowerShell redirection. Assamese uses ৰ (U+09F0) and ৱ (U+09F1), not Bengali র/ব.
+- The editor tool rejects payloads over ~6000 characters: write large files in chunks (create, then insert at the end).
+- `tsconfig.json` includes `**/*.ts`, so never leave scratch `.ts` files in the repo root while running `next build`.
 
 ## npm scripts
 | Script | Command |
