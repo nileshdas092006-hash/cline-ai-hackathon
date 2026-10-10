@@ -1,8 +1,16 @@
 # Active context
 
 ## Current state
-T1 (core rule engine v2) is done. `src/core/` has the zod schemas, the 3 rule packs with provenance, the registry, name matcher, age, Aadhaar masking, benefit overrides, rule engine, rejection codes and fake sample sets A/B/C. 93 tests pass; typecheck, lint and build are clean.
-The app is still a placeholder home page, now titled "KaagazCheck: কাগজ চেক" with "Check before you apply" / "আবেদনৰ আগতে পৰীক্ষা কৰক", `<html lang="as">`.
+T2 (main flow) is done. One mobile flow on `/` (client component `src/app/_components/KaagazApp.tsx`): scheme cards (PM-KISAN first, "flagship") → documents (photo per slot via `/api/extract`, "type it in", or samples A/B/C with a purple "Demo mode: fake sample documents" label) → confirm fields (low confidence in amber) → big Yes/No questions → report from `/api/check`. The report shows the Eligibility banner, the Readiness banner (+ "check at the bank" list), Fix before you apply, Please verify, OK (collapsed), benefit (central / state top-up separately), supporting docs, a print-only cover sheet and the bilingual disclaimer. Assamese default, English toggle (`src/i18n.ts`).
+150 tests pass; typecheck, lint and build are clean. The live Cline API reads a fake Aadhaar image correctly (image input works).
+
+## Decisions made in T2
+- `src/server/ai.ts` is the only model caller: `extractDocument(image, hint?, deps?)` → `{ doc, detectedDocType } | { error: ai_unavailable | ai_failed | invalid_image }`, one retry, logs only model/promptVersion/inputHash/outcome. The Cline API wraps responses as `{ data: { choices } }`; both shapes are handled.
+- Raw model JSON → `ExtractedDoc` in pure `src/core/extraction.ts` (full Aadhaar → last 4; unscored AI fields → 0.5 confidence so they get confirmed; non-ISO DOB → low confidence).
+- Route files do NOT export `runtime = "nodejs"`: Next 16.4 rejects it with `cacheComponents` (Node is the default anyway). Awaiting Claude's confirmation.
+- Nothing is read from the death certificate or BPL proof (presence only); `husbandName` is not collected.
+- The client never imports the engine: UI helpers live in `flow.ts`, `reportView.ts`, `catalog.ts`, `thresholds.ts`; the page (a server component) passes a plain `SchemeView[]` catalog.
+- "Type it in" adds an empty document (counted as present by the engine); flagged for Claude.
 
 ## Decisions made in T1
 - Brief v2: **Assamese default + English**; two verdicts (eligibility, readiness); provenance on every rule (verified vs provisional).
@@ -16,4 +24,4 @@ The app is still a placeholder home page, now titled "KaagazCheck: কাগজ 
 - Assamese strings in `labels.ts`, the scheme packs and `rejectionCodes.ts` are drafts awaiting native-speaker review (Das).
 
 ## Next step
-T2: main flow (scheme picker → documents/samples → confirm fields → questions → two-verdict report), `src/i18n.ts` (as/en), AI gateway `src/server/ai.ts`.
+T3: Rule Maintenance Agent (`@cline/sdk`, `node:sqlite` `rule_versions`, regression tests + human approval, versioned packs). Before the demo: a phone click-through of the T2 flow and native-speaker review of `src/i18n.ts`.

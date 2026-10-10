@@ -35,5 +35,12 @@
 - Vite writes warnings to stderr, which PowerShell reports as `NativeCommandError`. Check the real exit code (e.g. run via `cmd /c ... & echo %ERRORLEVEL%`).
 - `npm install` is slow here (about 5 minutes for a fresh install); long commands can exceed the tool timeout, so run them in the background with logs.
 
+## Gotchas found in T2
+- Next 16.4 + `cacheComponents: true` **rejects `export const runtime = "nodejs"`** in route files (build error). Node.js is the default runtime, so routes omit it.
+- The Cline API (`/chat/completions`) returns the OpenAI body wrapped as `{ data: { choices: [...] } }`. Image input (`image_url` data URL) works with `anthropic/claude-sonnet-5.5`.
+- This PowerShell session had an **empty `CLINE_MODEL` env var** set. Next never overrides an existing env var from `.env.local`, so the AI looked unconfigured. Run `Remove-Item Env:CLINE_MODEL` before `next dev`/`next start` if `/api/extract` says `ai_unavailable` while `.env.local` is filled.
+- In Vitest, `beforeEach(() => mock.mockReset())` returns the mock, which Vitest then runs as a teardown. Use a block body `beforeEach(() => { mock.mockReset(); })`.
+- Manual smoke test: `npm run build`, `npx next start -p 3123`, `node scripts/smoke.mjs http://localhost:3123`.
+
 ## Scaffold notes
 Generated with `create-next-app@16.4.0` in a temp folder and copied in (it refuses non-empty folders). Defaults kept: `cacheComponents: true`, `partialPrefetching: true`. `AGENTS.md` is written by Next (`next dev` re-adds it), so it is committed.

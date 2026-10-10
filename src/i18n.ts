@@ -1,0 +1,244 @@
+// All fixed UI strings, Assamese (default) and English. Pure.
+// Assamese strings are DRAFTS: a native speaker (Das) must review them before the demo.
+// Document and office names come from src/core/labels.ts (shared with the rule engine).
+import { DOC_LABELS, FIX_WHERE_LABELS } from "./core/labels";
+import type { DocType, Eligibility, FieldName, FixWhere, Readiness } from "./core/types";
+
+export type Lang = "as" | "en";
+export const DEFAULT_LANG: Lang = "as";
+
+const en = {
+  langToggle: "অসমীয়া",
+  langToggleAria: "Switch language to Assamese",
+  stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
+  back: "Back",
+  next: "Next",
+  startOver: "Start over",
+  demoMode: "Demo mode: fake sample documents",
+  scheme: {
+    title: "Which scheme are you applying for?",
+    flagship: "Flagship demo",
+    choose: "Choose",
+  },
+  docs: {
+    title: "Add your documents",
+    intro: "Take a photo of each document, or type the details yourself.",
+    required: "Required",
+    optional: "For the name check",
+    photo: "Take or upload a photo",
+    type: "Type it in",
+    reading: "Reading the document…",
+    added: "Added",
+    notAdded: "Not added",
+    remove: "Remove",
+    privacy: "Photos are read once and never stored. Only the last 4 digits of Aadhaar are kept.",
+    aiUnavailable: "Automatic reading is not available right now. Please type the details.",
+    aiFailed: "We could not read this photo. Please type the details.",
+    samplesTitle: "Or try a sample (fake documents)",
+    useSample: "Use sample",
+    missingRequired: (n: number) =>
+      `${n} required document(s) not added. You can still continue; the report will show what is missing.`,
+  },
+  confirm: {
+    title: "Check what we read",
+    intro: "Check the highlighted boxes. Type each value exactly as printed on the document.",
+    lowConfidence: "Please check this",
+    looksRight: "This is correct",
+    toCheck: (n: number) => `${n} item(s) still to check`,
+    noDocs: "No documents added yet. Go back to add them, or continue to see what is missing.",
+  },
+  fields: {
+    name: "Name",
+    dob: "Date of birth",
+    aadhaarLast4: "Aadhaar: last 4 digits",
+    accountNo: "Account number",
+    ifsc: "IFSC code",
+    ownerNames: "Land owner name(s)",
+    husbandName: "Husband's name",
+    landAreaHectares: "Land area (hectares)",
+  } satisfies Record<FieldName, string>,
+  fieldHints: {
+    dob: "e.g. 12/03/1975",
+    aadhaarLast4: "Only the last 4 digits",
+    ownerNames: "One name per line",
+  },
+  questions: {
+    title: "Answer a few questions",
+    yes: "Yes",
+    no: "No",
+    answered: (n: number, total: number) => `${n} of ${total} answered`,
+    unansweredNote: "Questions you skip are shown as \"please verify\" in the report.",
+    provisional: "Rule not confirmed",
+    seeResult: "See the result",
+  },
+  report: {
+    checking: "Checking…",
+    error: "Something went wrong. Please try again.",
+    eligibilityTitle: "Eligibility",
+    readinessTitle: "Application readiness",
+    eligibility: {
+      likely_eligible: "Likely eligible",
+      not_eligible: "Not eligible",
+      needs_verification: "Needs verification",
+    } satisfies Record<Eligibility, string>,
+    readiness: {
+      ready_for_review: "Ready to submit",
+      action_required: "Fix before you apply",
+      needs_verification: "Needs verification",
+    } satisfies Record<Readiness, string>,
+    checkAtBank: "Check at the bank or office",
+    fixTitle: "Fix before you apply",
+    verifyTitle: "Please verify",
+    okTitle: (n: number) => `OK (${n})`,
+    nothingToFix: "Nothing to fix.",
+    where: "Where",
+    source: "Source",
+    verifiedOn: (d: string) => `verified on ${d}`,
+    noSourceLink: "no official link yet",
+    provisional: "Provisional rule",
+    benefitTitle: "Benefit amount",
+    central: "Central share",
+    stateTopUp: "State top-up",
+    confirmLocally: "State top-up: confirm locally",
+    total: "Total",
+    perMonth: "per month",
+    perYear: "per year",
+    instalments: (n: number) => `in ${n} instalments`,
+    supportingTitle: "Supporting documents (commonly asked)",
+    present: "Added",
+    absent: "Not added",
+    asOf: (d: string) => `Rules as on ${d}`,
+    ruleVersion: (v: string) => `rule pack v${v}`,
+    print: "Print cover sheet",
+    coverTitle: "Application cover sheet",
+    coverDocs: "Documents added",
+  },
+};
+
+export type Strings = typeof en;
+
+const as: Strings = {
+  langToggle: "English",
+  langToggleAria: "ভাষা ইংৰাজীলৈ সলনি কৰক",
+  stepOf: (n: number, total: number) => `পদক্ষেপ ${n}/${total}`,
+  back: "উভতি যাওক",
+  next: "আগবাঢ়ক",
+  startOver: "নতুনকৈ আৰম্ভ কৰক",
+  demoMode: "ডেমো ম'ড: নকল নমুনা নথি",
+  scheme: {
+    title: "আপুনি কোনটো আঁচনিৰ বাবে আবেদন কৰিব?",
+    flagship: "মুখ্য ডেমো",
+    choose: "বাছক",
+  },
+  docs: {
+    title: "আপোনাৰ নথিবোৰ যোগ কৰক",
+    intro: "প্ৰতিখন নথিৰ ফটো লওক, নাইবা তথ্যবোৰ নিজে লিখক।",
+    required: "লাগিবই",
+    optional: "নাম মিলোৱাৰ বাবে",
+    photo: "ফটো লওক বা আপলোড কৰক",
+    type: "নিজে লিখক",
+    reading: "নথিখন পঢ়ি আছোঁ…",
+    added: "যোগ কৰা হৈছে",
+    notAdded: "যোগ কৰা হোৱা নাই",
+    remove: "আঁতৰাওক",
+    privacy: "ফটো এবাৰ পঢ়ি এৰি দিয়া হয়, কেতিয়াও সংৰক্ষণ কৰা নহয়। আধাৰৰ কেৱল শেষৰ ৪টা সংখ্যা ৰখা হয়।",
+    aiUnavailable: "স্বয়ংক্ৰিয়ভাৱে পঢ়াৰ সুবিধা এতিয়া নাই। অনুগ্ৰহ কৰি তথ্যবোৰ নিজে লিখক।",
+    aiFailed: "এই ফটোখন পঢ়িব নোৱাৰিলোঁ। অনুগ্ৰহ কৰি তথ্যবোৰ নিজে লিখক।",
+    samplesTitle: "নাইবা এটা নমুনা চাওক (নকল নথি)",
+    useSample: "নমুনা ব্যৱহাৰ কৰক",
+    missingRequired: (n: number) =>
+      `${n}খন লাগতিয়াল নথি যোগ কৰা হোৱা নাই। আপুনি তথাপিও আগবাঢ়িব পাৰে; কি নাই প্ৰতিবেদনত দেখুওৱা হ'ব।`,
+  },
+  confirm: {
+    title: "আমি যি পঢ়িলোঁ পৰীক্ষা কৰক",
+    intro: "চিন দিয়া ঘৰবোৰ পৰীক্ষা কৰক। নথিত ছপা হোৱাৰ দৰে হুবহু লিখক।",
+    lowConfidence: "অনুগ্ৰহ কৰি পৰীক্ষা কৰক",
+    looksRight: "এইটো শুদ্ধ",
+    toCheck: (n: number) => `পৰীক্ষা কৰিবলৈ বাকী: ${n}টা`,
+    noDocs: "এতিয়ালৈকে কোনো নথি যোগ কৰা হোৱা নাই। উভতি গৈ যোগ কৰক, নাইবা কি নাই চাবলৈ আগবাঢ়ক।",
+  },
+  fields: {
+    name: "নাম",
+    dob: "জন্মৰ তাৰিখ",
+    aadhaarLast4: "আধাৰ: শেষৰ ৪টা সংখ্যা",
+    accountNo: "একাউণ্ট নম্বৰ",
+    ifsc: "IFSC ক'ড",
+    ownerNames: "মাটিৰ গৰাকীৰ নাম",
+    husbandName: "স্বামীৰ নাম",
+    landAreaHectares: "মাটিৰ পৰিমাণ (হেক্টৰ)",
+  },
+  fieldHints: {
+    dob: "যেনে 12/03/1975",
+    aadhaarLast4: "কেৱল শেষৰ ৪টা সংখ্যা",
+    ownerNames: "প্ৰতিশাৰীত এটা নাম",
+  },
+  questions: {
+    title: "কেইটামান প্ৰশ্নৰ উত্তৰ দিয়ক",
+    yes: "হয়",
+    no: "নহয়",
+    answered: (n: number, total: number) => `${total}টাৰ ভিতৰত ${n}টাৰ উত্তৰ দিয়া হৈছে`,
+    unansweredNote: "উত্তৰ নিদিয়া প্ৰশ্নবোৰ প্ৰতিবেদনত \"পৰীক্ষা কৰক\" হিচাপে দেখুওৱা হ'ব।",
+    provisional: "নিয়ম নিশ্চিত নহয়",
+    seeResult: "ফলাফল চাওক",
+  },
+  report: {
+    checking: "পৰীক্ষা কৰি আছোঁ…",
+    error: "কিবা ভুল হ'ল। অনুগ্ৰহ কৰি আকৌ চেষ্টা কৰক।",
+    eligibilityTitle: "যোগ্যতা",
+    readinessTitle: "আবেদনৰ প্ৰস্তুতি",
+    eligibility: {
+      likely_eligible: "সম্ভৱতঃ যোগ্য",
+      not_eligible: "যোগ্য নহয়",
+      needs_verification: "পৰীক্ষা কৰিব লাগিব",
+    },
+    readiness: {
+      ready_for_review: "জমা দিয়াৰ বাবে সাজু",
+      action_required: "আবেদনৰ আগতে শুধৰাওক",
+      needs_verification: "পৰীক্ষা কৰিব লাগিব",
+    },
+    checkAtBank: "বেংক বা কাৰ্যালয়ত নিশ্চিত কৰক",
+    fixTitle: "আবেদনৰ আগতে শুধৰাওক",
+    verifyTitle: "অনুগ্ৰহ কৰি পৰীক্ষা কৰক",
+    okTitle: (n: number) => `ঠিক আছে (${n})`,
+    nothingToFix: "শুধৰাবলগীয়া একো নাই।",
+    where: "ক'ত",
+    source: "উৎস",
+    verifiedOn: (d: string) => `${d} তাৰিখে পৰীক্ষিত`,
+    noSourceLink: "চৰকাৰী লিংক এতিয়াও নাই",
+    provisional: "অস্থায়ী নিয়ম",
+    benefitTitle: "সাহায্যৰ পৰিমাণ",
+    central: "কেন্দ্ৰীয় অংশ",
+    stateTopUp: "ৰাজ্যৰ অতিৰিক্ত ধন",
+    confirmLocally: "ৰাজ্যৰ অতিৰিক্ত ধন: স্থানীয়ভাৱে নিশ্চিত কৰক",
+    total: "মুঠ",
+    perMonth: "প্ৰতি মাহে",
+    perYear: "প্ৰতি বছৰে",
+    instalments: (n: number) => `${n}টা কিস্তিত`,
+    supportingTitle: "সহায়ক নথি (সাধাৰণতে বিচৰা হয়)",
+    present: "যোগ কৰা হৈছে",
+    absent: "যোগ কৰা হোৱা নাই",
+    asOf: (d: string) => `${d} তাৰিখৰ নিয়ম অনুসৰি`,
+    ruleVersion: (v: string) => `নিয়মৰ সংস্কৰণ v${v}`,
+    print: "কভাৰ শ্বীট প্ৰিণ্ট কৰক",
+    coverTitle: "আবেদনৰ কভাৰ শ্বীট",
+    coverDocs: "যোগ কৰা নথি",
+  },
+};
+
+export const STRINGS: Record<Lang, Strings> = { as, en };
+
+export function pick(lang: Lang, enText: string, asText: string): string {
+  return lang === "as" ? asText : enText;
+}
+
+/** Document name as a title, e.g. "Bank passbook" / "বেংক পাছবুক". */
+export function docTitle(lang: Lang, docType: DocType): string {
+  const l = DOC_LABELS[docType];
+  return lang === "as" ? l.as : l.en.charAt(0).toUpperCase() + l.en.slice(1);
+}
+
+export function fixWhereLabel(lang: Lang, where: FixWhere): string {
+  const l = FIX_WHERE_LABELS[where];
+  return lang === "as" ? l.as : l.en;
+}
+

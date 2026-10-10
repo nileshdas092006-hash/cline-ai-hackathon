@@ -6,6 +6,7 @@ import { benefitOn } from "./benefit";
 import { assertIsoDate, isIsoDate } from "./dates";
 import { DISCLAIMER, DOC_LABELS, FIX_WHERE_LABELS, type Bilingual } from "./labels";
 import { bestNameMatch, normalizeName } from "./nameMatch";
+import { LOW_CONFIDENCE_THRESHOLD } from "./thresholds";
 import type {
   Answers,
   Check,
@@ -22,8 +23,8 @@ import type {
   SchemeRule,
 } from "./types";
 
-/** A field read with confidence below this must be confirmed by the user. */
-export const LOW_CONFIDENCE_THRESHOLD = 0.8;
+/** Re-exported: a field read with confidence below this must be confirmed by the user. */
+export { LOW_CONFIDENCE_THRESHOLD };
 
 const where = (w: FixWhere): Bilingual => FIX_WHERE_LABELS[w];
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

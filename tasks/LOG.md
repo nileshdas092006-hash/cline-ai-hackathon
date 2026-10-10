@@ -68,3 +68,45 @@ Followed `tasks/NEXT.md` (Step 0 + `tasks/backlog/T1-core-engine.md`), with `doc
 - Please confirm the readiness rule for external checks (they don't block `ready_for_review` on their own), or say if you want a different label, e.g. `ready_for_review` with a "confirm these N items" list. T2's UI will show them as a separate "confirm at bank/portal" group.
 - Please confirm the Orunodoi any-of list and the widow pension `bpl_proof` document are wanted as modelled.
 
+
+## T2: main flow (run-144641-b8cr, 2026-10-10)
+Followed `tasks/NEXT.md` (T2 + adjustments) and `tasks/backlog/T2-main-flow.md`. I wrote tests first for every new pure module and for both API routes. One mobile flow: scheme → documents → confirm fields → questions → two-verdict report → print cover sheet.
+
+**Files created**
+- Pure core (tested): `src/core/extraction.ts` (raw model JSON → strict `ExtractedDoc`; DD/MM/YYYY → ISO; full Aadhaar → last 4 digits; AI-read fields without a score get confidence 0.5 so they are always confirmed), `src/core/docFields.ts` (which fields each doc type needs), `src/core/flow.ts` (document slots, field edit/confirm, upsert/remove, relevant answers), `src/core/reportView.ts` (fix / verify / external / ok sections, 🟢🔴🟡⚪ tones, `₹1,25,000` formatting, benefit view), `src/core/catalog.ts` (serialisable scheme list, PM-KISAN first as flagship), `src/core/thresholds.ts`.
+- `src/i18n.ts`: all fixed UI strings, `as` (default) + `en`, same keys (tested), with doc/office names reused from `labels.ts`.
+- `src/server/ai.ts`: the only model caller. Cline API chat/completions with an `image_url` part, then JSON extraction, zod `RawExtraction`, `toExtractedDoc`, one retry, then `{ error }` (`ai_unavailable` | `ai_failed` | `invalid_image`). `fetch`/`env`/`log` are injectable for tests. Logs `{ model, promptVersion: "extract-doc-v1", inputHash (sha256/16), attempt, outcome, ms }` only.
+- `src/server/api.ts` + `src/app/api/check/route.ts`, `src/app/api/extract/route.ts` (thin). `/api/check` validates with zod (strict `ExtractedDoc`, so a full Aadhaar is rejected), 404 for an unknown scheme/version, `asOfDate` defaults to today in IST. Error bodies hold only paths and codes, never submitted values.
+- UI (`src/app/_components/`): `KaagazApp` (state + steps), `SchemeStep`, `DocsStep` (photo per slot with camera capture, browser downscale to JPEG ≤1600px, "type it in", samples A/B/C for the chosen scheme), `ConfirmStep` (low confidence highlighted in amber, "This is correct" button), `QuestionsStep` (big Yes/No, "rule not confirmed" badge), `ReportStep` + `CheckItem` + `BenefitCard`, `CoverSheet` (print only, masked Aadhaar, no account number), `ui.tsx`, `image.ts`.
+- `scripts/smoke.mjs`: manual smoke test against a running server (not part of `npm test`).
+- Tests: `src/core/{extraction,flow,reportView,catalog}.test.ts`, `src/i18n.test.ts`, `src/server/{ai,apiCheck,apiExtract}.test.ts` (ai.ts mocked in the API tests; `fetch` injected in the ai tests; no network).
+
+**Files changed**
+- `src/app/page.tsx` (server component → `KaagazApp` with the catalog + samples), `src/app/layout.tsx` (Noto Sans Bengali for Assamese, viewport, Geist Mono dropped), `src/app/globals.css` (one light high-contrast theme, font stack, print background).
+- `src/core/evaluate.ts`: `LOW_CONFIDENCE_THRESHOLD` moved to `thresholds.ts` and re-exported, so the client bundle doesn't pull in the engine.
+
+**Results**
+- `npm test`: 16 files, 150 passed, 0 failed (93 from T1 + 57 new).
+- `npm run typecheck`: pass. `npm run lint`: pass. `npm run build`: pass (`/` static, `/api/check` + `/api/extract` dynamic).
+- Smoke test on `next start`: home HTML has `lang="as"`, the Assamese title and the flagship badge. `/api/check` A → likely_eligible + ready_for_review (4 external checks to verify); B → action_required (`name_land_record` action_required, `name_bank_passbook` possible_match → verify); C → action_required (`doc_death_certificate`).
+- Live AI check with the real key (fake "SAMPLE ONLY" Aadhaar image I drew locally): 200, `{ name: "Ramesh Kumar Sharma", dob: "1975-03-12", aadhaarLast4: "4821" }` from the printed "1234 5678 4821". Image input is accepted by the Cline API. With no key: 503 `ai_unavailable`, and the UI switches to manual entry.
+
+
+**Design decisions / deviations (please review)**
+- **No `export const runtime = "nodejs"` in the route files.** Next 16.4 fails the build with "Route segment config "runtime" is not compatible with `nextConfig.cacheComponents`". Node.js is the default (and the only runtime with cacheComponents), so the routes do run on Node. A comment in each route explains this. Rule 03-stack asks for the export, so please confirm.
+- **The Cline API wraps the OpenAI body as `{ data: { choices } }`.** `ai.ts` accepts both shapes (tested). Before this fix, every live call fell back to `ai_failed`.
+- **Environment gotcha:** this shell has an empty `CLINE_MODEL` environment variable. Next does not override an existing env var from `.env.local`, so the server saw no model and returned `ai_unavailable`. It works after `Remove-Item Env:CLINE_MODEL`. Added to techContext.
+- **Minimum data:** nothing is read from the death certificate or BPL proof (the engine only checks that they are present), so `husbandName` is not collected. The cover sheet shows the masked Aadhaar and no account number.
+- **Empty manual docs:** "Type it in" adds the document with empty fields. The engine then counts it as present, and its fields show as "please verify"/"could not read". I think this is right ("I have it, I'll type it"); flagging it in case you prefer the slot to count only once a field is filled.
+- A sample replaces any documents and answers already entered and jumps to "Check what we read" (all sample fields are ≥ 0.8 confidence, so nothing is highlighted). The purple "Demo mode: fake sample documents (A)" label stays on every step and on the printed sheet.
+- Unanswered questions are allowed; the engine marks them needs_verification (a note under the questions says so).
+
+**Open issues**
+- All new Assamese UI strings in `src/i18n.ts` are drafts and need native-speaker review (Das), like the T1 strings.
+- I did not test the UI in a real phone browser here (no browser automation in this environment). The flow was checked through the built HTML and the APIs; a manual click-through on a phone is recommended before the demo.
+- `tasks/NEXT.md` (Claude's T2 spec), `.cline-runs/index.md` and `run-134715-f3yl.log` were already modified before this run, not by me. They are committed as-is with `git add -A`, per the workflow; I did not edit them.
+
+**Requests for Claude**
+- Confirm dropping `export const runtime = "nodejs"` (see above), or say whether to turn off `cacheComponents` instead.
+- Confirm that "Type it in" should mark a document as added before any field is filled.
+

@@ -1,15 +1,18 @@
-# NEXT TASK: T1, core rule engine v2 (tests first)
+# NEXT TASK: T2, main flow end to end (API + UI)
 
-T0 reviewed: tests pass (3/3), and the commit is in. Answer to your question: `docs/sample-notice-orunodoi-oct2026.md` is intentional; it is demo input for **T3** (not T4).
+T1 reviewed: 93/93 tests pass and typecheck is clean. Answers to your requests:
+1. External checks are needs_verification but don't block ready_for_review on their own: **approved** (show them as a visible "check at the bank" list under the readiness banner).
+2. Land in a spouse's or minor child's name → owner-name mismatch becomes needs_verification: **approved**.
+3. Orunodoi any-of list and the widow BPL-proof document stay provisional: **approved**.
 
-**Important changes since T0 (read before coding):**
-- `memory-bank/projectbrief.md` is now **v2** and `docs/schemes.md` is **rule packs v2** (provenance, verified vs provisional, two verdicts, defensive name matching, corrected widow pension 40–79 and ₹300).
-- The language changed: **Assamese default + English** (not Hindi).
+Note: `.env.local` does NOT exist yet (Das will add `CLINE_API_KEY` and `CLINE_MODEL`). So:
+- `ai.ts` must handle a missing key gracefully: return `{ error: "ai_unavailable" }` and the UI falls back to manual entry. No crash, and no build failure.
+- Tests mock `ai.ts`; no network in tests.
 
-## Step 0 (small, 5 min)
-- Refresh `memory-bank/productContext.md`, `systemPatterns.md` and `activeContext.md` so they match brief v2 (two verdicts, provenance, Assamese).
-- Switch the app title to "KaagazCheck: কাগজ চেক" with the tagline "Check before you apply" / "আবেদনৰ আগতে পৰীক্ষা কৰক", set `<html lang="as">`, and update the smoke test accordingly.
+Do `tasks/backlog/T2-main-flow.md`. Adjustments:
+- `src/core/samples.ts` already exists from T1; reuse it, don't duplicate.
+- Default language Assamese, English toggle; keep all fixed strings in `src/i18n.ts` (reuse `src/core/labels.ts` where it fits).
+- The report screen shows: the Eligibility banner, the Readiness banner, then "Fix before you apply" (action_required), then "Please verify" (needs_verification, including external checks), then "OK" (collapsed). Each item shows where to fix it, a source link and "verified on" date, and a "provisional rule" badge where relevant. Benefit amount: central share and state top-up shown separately ("state top-up: confirm locally" when null).
+- Add a clear "Demo mode: fake sample documents" label when a sample is used.
 
-## Then do `tasks/backlog/T1-core-engine.md` exactly (it is already updated for v2).
-
-**Done when:** everything in T1's "Done when" holds, plus Step 0 is done; LOG.md updated; committed "T1: core rule engine v2".
+**Done when:** everything in T2's "Done when" holds; `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass; LOG.md updated; committed "T2: main flow".
