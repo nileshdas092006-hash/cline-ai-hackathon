@@ -5,6 +5,7 @@ import { evaluate } from "@/core/evaluate";
 import { getScheme } from "@/core/schemes";
 import { Answers, DocType, ExtractedDoc, IsoDate } from "@/core/types";
 import { extractDocument } from "@/server/ai";
+import { getRuleService } from "@/server/rules";
 
 /** Base64 of a ~6 MB image is ~8 MB; refuse anything bigger before parsing further. */
 const MAX_BODY_CHARS = 9 * 1024 * 1024;
@@ -52,6 +53,7 @@ export async function handleCheck(req: Request): Promise<Response> {
   if (!parsed.success) return json({ error: "invalid_request", issues: issues(parsed.error) }, 400);
 
   const { schemeId, schemeVersion, docs, answers } = parsed.data;
+  getRuleService().syncRegistry(); // published rule versions take effect at once
   const scheme = getScheme(schemeId, schemeVersion);
   if (!scheme) return json({ error: "unknown_scheme" }, 404);
   return json(evaluate(scheme, docs, answers, parsed.data.asOfDate ?? todayInIndia()));

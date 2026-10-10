@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_NAME, APP_NAME_AS, APP_TAGLINE_AS, APP_TAGLINE_EN } from "@/core/appInfo";
 import type { SchemeView } from "@/core/catalog";
-import { relevantAnswers } from "@/core/flow";
+import { countedDocs, relevantAnswers } from "@/core/flow";
 import type { SampleSet } from "@/core/samples";
 import { Report, type Answers, type ExtractedDoc } from "@/core/types";
 import { DEFAULT_LANG, STRINGS, type Lang } from "@/i18n";
@@ -94,7 +94,8 @@ export function KaagazApp({ catalog, samples }: { catalog: SchemeView[]; samples
         body: JSON.stringify({
           schemeId: scheme.id,
           schemeVersion: scheme.version,
-          docs,
+          // An empty typed-in document does not count, so the engine reports it as missing.
+          docs: countedDocs(docs),
           answers: relevantAnswers(scheme.questions, answers),
         }),
       });
@@ -182,7 +183,7 @@ export function KaagazApp({ catalog, samples }: { catalog: SchemeView[]; samples
           )}
         </main>
       </div>
-      {report && scheme && <CoverSheet lang={lang} scheme={scheme} report={report} docs={docs} sampleId={sampleId} />}
+      {report && scheme && <CoverSheet lang={lang} scheme={scheme} report={report} docs={countedDocs(docs)} sampleId={sampleId} />}
     </>
   );
 }

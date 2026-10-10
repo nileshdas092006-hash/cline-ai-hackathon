@@ -15,8 +15,12 @@
 - `src/server/ai.ts` (T2): the **only** module that calls a model. Structured JSON → zod → one retry → safe fallback `{ error }`. Logs model, prompt version, input hash (never raw personal data). `fetch`/`env`/`log` are injectable for tests.
 - `src/server/api.ts` (T2): request schemas + handlers for `/api/check` (engine only) and `/api/extract` (via ai.ts); the route files are thin wrappers.
 - `src/app/_components/` (T2): the single client flow `KaagazApp` and its steps; `page.tsx` (server) passes a plain catalog + samples.
-- `src/server/store.ts` (T3): the **only** database writer (`node:sqlite`, WAL, transactions); `rule_versions` table.
-- `src/server/agent/` (T3): `@cline/sdk` Rule Maintenance Agent; its tools call `src/core` (`registerScheme`, `evaluate`).
+- T3 pure core: `ruleTests.ts` (zod `RuleTestCase` benefit|evaluate + deterministic `runRuleTests`), `schemes/regression.ts` (built-in regression suites), `ruleDiff.ts` (keyed before/after diff), `ruleDiffView.ts` (plain-English labels for the UI), `rulePolicy.ts` (version bump, ≥ 3 new tests, verified-provenance rule), `mergePatch.ts` (RFC 7386), `notice.ts` (normalise; extract the demo notices), `agentLog.ts` (one-line tool summaries).
+- `src/server/store.ts` (T3): the **only** database writer (`node:sqlite`, WAL, every write in `BEGIN IMMEDIATE … COMMIT`); `rule_versions` table (+ `notice`, `summary`).
+- `src/server/rules.ts` (T3): `RuleService`: candidate (full rule or merge patch) → validate (zod + policy) → runTests (new + regression) → saveProposal (only if all pass) → publish (re-check, then `registerScheme`) / reject. `syncRegistry()` loads published versions into the registry (idempotent; called per request).
+- `src/server/agents/ruleMaintenance.ts` (T3): `@cline/sdk` Rule Maintenance Agent: system prompt + 5 `createTool` tools (zod inputs, re-validated with `checked()`), session state, `runRuleAgent(notice)` → streams `AgentEvent`s; the result comes from what was saved through the tools, never from the agent's text.
+- `src/server/ai.ts` also has `runToolAgent` (Cline SDK `Agent`, `openai-compatible` → Cline API): it is still the only module that talks to a model.
+- `src/server/adminApi.ts` + `src/app/api/admin/rules/**` (T3): propose (NDJSON stream), list (history + diff), `[id]/publish`, `[id]/reject`. `src/app/admin/` is the maintainer UI.
 - `src/app/api/**/route.ts`: thin handlers on the Node.js runtime (the default; an explicit `runtime` export breaks the build with `cacheComponents`).
 - `src/app/**`: UI (Assamese default, English toggle; fixed strings in `src/i18n.ts`). Calls API routes, never the model.
 

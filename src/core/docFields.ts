@@ -18,6 +18,25 @@ export const DOC_FIELDS: Record<DocType, readonly FieldName[]> = {
   other: ["name"],
 };
 
+/**
+ * The field that must have a value before a typed-in document counts as added.
+ * null = nothing is read from this document; adding it is enough (presence is all the engine checks).
+ */
+export const MAIN_FIELD: Record<DocType, FieldName | null> = {
+  aadhaar: "name",
+  bank_passbook: "name",
+  land_record: "ownerNames",
+  ration_card: "name",
+  death_certificate: null,
+  bpl_proof: null,
+  voter_id: "name",
+  age_proof: "name",
+  address_proof: "name",
+  self_declaration: "name",
+  income_certificate: "name",
+  other: "name",
+};
+
 /** Splits a list of names typed or read as one string ("A; B" or one per line). */
 export function splitNames(text: string): string[] {
   return text

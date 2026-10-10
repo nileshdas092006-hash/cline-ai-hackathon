@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Tests never touch the real data/ database: the default store is in memory.
+    env: { KAAGAZ_DB_PATH: ":memory:" },
   },
 });

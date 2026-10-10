@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { SchemeView } from "@/core/catalog";
-import { blankDoc, removeDoc, upsertDoc } from "@/core/flow";
+import { blankDoc, isDocAdded, removeDoc, upsertDoc } from "@/core/flow";
 import type { SampleSet } from "@/core/samples";
 import { ExtractedDoc, type DocType } from "@/core/types";
 import { STRINGS, docTitle, pick, type Lang } from "@/i18n";
@@ -32,8 +32,12 @@ export function DocsStep({
   const t = STRINGS[lang];
   const [busy, setBusy] = useState<DocType | null>(null);
   const [failed, setFailed] = useState<DocType | null>(null);
-  const has = (d: DocType) => docs.some((x) => x.docType === d);
-  const missingRequired = scheme.slots.filter((s) => s.required && !has(s.docType)).length;
+  // `started`: the slot has a document (maybe still empty). `added`: it counts (its main field has a value).
+  const docOf = (d: DocType) => docs.find((x) => x.docType === d);
+  const missingRequired = scheme.slots.filter((s) => {
+    const doc = docOf(s.docType);
+    return s.required && !(doc && isDocAdded(doc));
+  }).length;
 
   async function readPhoto(docType: DocType, file: File) {
     setBusy(docType);
@@ -71,16 +75,18 @@ export function DocsStep({
 
       <ul className="flex flex-col gap-3">
         {scheme.slots.map((slot) => {
-          const added = has(slot.docType);
+          const doc = docOf(slot.docType);
+          const started = doc !== undefined;
+          const added = doc !== undefined && isDocAdded(doc);
           return (
             <li key={slot.docType}>
-              <Card className={added ? "border-green-600" : ""}>
+              <Card className={added ? "border-green-600" : started ? "border-amber-500" : ""}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-lg font-semibold">{docTitle(lang, slot.docType)}</h2>
                   <Badge tone={slot.required ? "teal" : "zinc"}>{slot.required ? t.docs.required : t.docs.optional}</Badge>
                 </div>
-                <p className={`mt-1 text-sm font-medium ${added ? "text-green-800" : "text-zinc-600"}`}>
-                  {added ? `✓ ${t.docs.added}` : t.docs.notAdded}
+                <p className={`mt-1 text-sm font-medium ${added ? "text-green-800" : started ? "text-amber-900" : "text-zinc-600"}`}>
+                  {added ? `✓ ${t.docs.added}` : started ? `✏️ ${t.docs.toType}` : t.docs.notAdded}
                 </p>
                 {busy === slot.docType ? (
                   <p role="status" className="mt-3 text-base">
@@ -103,7 +109,7 @@ export function DocsStep({
                         }}
                       />
                     </label>
-                    {added ? (
+                    {started ? (
                       <button type="button" className={btn.quiet} onClick={() => onDocs(removeDoc(docs, slot.docType))}>
                         {t.docs.remove}
                       </button>

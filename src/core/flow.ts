@@ -1,11 +1,11 @@
 // Pure helpers for the main flow (documents → confirm fields → questions). No React here.
 // Deliberately does not import the engine or the registry, so the client bundle stays small.
-import { DOC_FIELDS, splitNames } from "./docFields";
+import { DOC_FIELDS, MAIN_FIELD, splitNames } from "./docFields";
 import { lastFourDigits, normalizeDob } from "./extraction";
 import { LOW_CONFIDENCE_THRESHOLD } from "./thresholds";
 import type { Answers, DocType, ExtractedDoc, FieldName, Question, SchemeRule } from "./types";
 
-export { DOC_FIELDS } from "./docFields";
+export { DOC_FIELDS, MAIN_FIELD } from "./docFields";
 
 export interface DocSlot {
   docType: DocType;
@@ -98,6 +98,24 @@ export function upsertDoc(docs: readonly ExtractedDoc[], doc: ExtractedDoc): Ext
 
 export function removeDoc(docs: readonly ExtractedDoc[], docType: DocType): ExtractedDoc[] {
   return docs.filter((d) => d.docType !== docType);
+}
+
+/**
+ * A document counts as added only once its main field (usually the name) has a value.
+ * "Type it in" alone does not count; documents we read nothing from count as soon as they are added.
+ */
+export function isDocAdded(doc: ExtractedDoc): boolean {
+  const field = MAIN_FIELD[doc.docType];
+  if (field === null) return true;
+  const v = doc.fields[field];
+  if (Array.isArray(v)) return v.some((s) => s.trim() !== "");
+  if (typeof v === "string") return v.trim() !== "";
+  return v !== undefined;
+}
+
+/** Only the documents that count as added (what the rule engine and the cover sheet see). */
+export function countedDocs(docs: readonly ExtractedDoc[]): ExtractedDoc[] {
+  return docs.filter(isDocAdded);
 }
 
 /** Only the answers to these questions (use `questionsFor(scheme)`). */

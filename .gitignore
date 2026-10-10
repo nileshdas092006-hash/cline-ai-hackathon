@@ -43,7 +43,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local databases (node:sqlite)
+# local databases (node:sqlite) and the app's data folder
+/data/
 *.db
 *.db-wal
 *.db-shm

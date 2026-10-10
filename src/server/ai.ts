@@ -16,14 +16,15 @@ export type AiError = "ai_unavailable" | "ai_failed" | "invalid_image";
 export type ExtractResult = { doc: ExtractedDoc; detectedDocType: DocType | null } | { error: AiError };
 
 export interface AiLogEntry {
-  fn: "extractDocument";
+  fn: "extractDocument" | "runToolAgent";
   model: string | null;
   promptVersion: string;
   inputHash: string | null;
   attempt: number;
-  outcome: "ok" | "unavailable" | "invalid_image" | "http_error" | "bad_output" | "network_error";
+  outcome: "ok" | "unavailable" | "invalid_image" | "http_error" | "bad_output" | "network_error" | "run_failed";
   status?: number;
   ms?: number;
+  toolCalls?: number;
 }
 
 export interface AiDeps {
@@ -168,6 +169,108 @@ export async function extractDocument(imageBase64: string, hintDocType?: DocType
     } catch (e) {
       log({ ...entry, outcome: e instanceof SyntaxError ? "bad_output" : "network_error", ms: Date.now() - started });
     }
+  }
+  return { error: "ai_failed" };
+}
+
+
+// ---------- tool-using agent (Cline SDK) ----------
+// The Rule Maintenance Agent runs here, so this file stays the one place that talks to a model.
+// The agent can only act through the tools it is given; its free text never decides anything.
+
+/** The part of the `@cline/sdk` Agent we use (lets tests inject a fake). */
+export interface AgentLike {
+  run(input: string): Promise<{ status: string; outputText: string; iterations: number; error?: Error }>;
+  subscribe(listener: (event: { type: string } & Record<string, unknown>) => void): () => void;
+  abort(reason?: unknown): void;
+}
+
+export type AgentFactory = (config: Record<string, unknown>) => AgentLike | Promise<AgentLike>;
+
+export interface ToolAgentDeps {
+  env?: Record<string, string | undefined>;
+  log?: (entry: AiLogEntry) => void;
+  createAgent?: AgentFactory;
+  timeoutMs?: number;
+}
+
+export interface ToolAgentRequest {
+  promptVersion: string;
+  systemPrompt: string;
+  input: string;
+  /** Tools made with `createTool` from `@cline/sdk` (zod input schemas). */
+  tools: readonly unknown[];
+  maxIterations?: number;
+  onEvent?: (event: { type: string } & Record<string, unknown>) => void;
+  signal?: AbortSignal;
+  deps?: ToolAgentDeps;
+}
+
+export type ToolAgentResult = { status: "completed" | "aborted"; outputText: string; attempts: number } | { error: "ai_unavailable" | "ai_failed" };
+
+const AGENT_TIMEOUT_MS = 240_000;
+
+/** The real factory: `new Agent(...)` from `@cline/sdk`, loaded only when an agent actually runs. */
+const sdkAgentFactory: AgentFactory = async (config) => {
+  const { Agent } = await import("@cline/sdk");
+  return new Agent(config as unknown as ConstructorParameters<typeof Agent>[0]) as unknown as AgentLike;
+};
+
+/**
+ * Runs a Cline SDK agent with the given tools against the Cline API (OpenAI-compatible).
+ * One retry if the run failed before any tool ran; then `{ error: "ai_failed" }`. Never throws.
+ */
+export async function runToolAgent(req: ToolAgentRequest): Promise<ToolAgentResult> {
+  const deps = req.deps ?? {};
+  const log = deps.log ?? defaultLog;
+  const config = configFrom(deps.env ?? process.env);
+  const inputHash = createHash("sha256").update(req.input).digest("hex").slice(0, 16);
+  const base = { fn: "runToolAgent" as const, model: config?.model ?? null, promptVersion: req.promptVersion, inputHash };
+
+  if (!config) {
+    log({ ...base, inputHash: null, attempt: 0, outcome: "unavailable" });
+    return { error: "ai_unavailable" };
+  }
+  const createAgent = deps.createAgent ?? sdkAgentFactory;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const started = Date.now();
+    let toolCalls = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let agent: AgentLike | undefined;
+    const onAbort = () => agent?.abort("cancelled");
+    try {
+      agent = await createAgent({
+        providerId: "openai-compatible",
+        baseUrl: config.baseUrl,
+        apiKey: config.apiKey,
+        modelId: config.model,
+        systemPrompt: req.systemPrompt,
+        tools: req.tools,
+        maxIterations: req.maxIterations ?? 16,
+        toolExecution: "sequential",
+      });
+      agent.subscribe((event) => {
+        if (event.type === "tool-finished") toolCalls++;
+        req.onEvent?.(event);
+      });
+      req.signal?.addEventListener("abort", onAbort, { once: true });
+      timer = setTimeout(() => agent?.abort("timeout"), deps.timeoutMs ?? AGENT_TIMEOUT_MS);
+      const result = await agent.run(req.input);
+      const ms = Date.now() - started;
+      if (result.status === "completed" || result.status === "aborted") {
+        log({ ...base, attempt, outcome: result.status === "completed" ? "ok" : "run_failed", ms, toolCalls });
+        return { status: result.status, outputText: result.outputText, attempts: attempt };
+      }
+      log({ ...base, attempt, outcome: "run_failed", ms, toolCalls });
+    } catch {
+      log({ ...base, attempt, outcome: "network_error", ms: Date.now() - started, toolCalls });
+    } finally {
+      if (timer) clearTimeout(timer);
+      req.signal?.removeEventListener("abort", onAbort);
+    }
+    // Retry only if nothing happened yet: a second run after tool calls could repeat side effects.
+    if (toolCalls > 0 || req.signal?.aborted) break;
   }
   return { error: "ai_failed" };
 }

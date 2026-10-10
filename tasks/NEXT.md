@@ -1,18 +1,16 @@
-# NEXT TASK: T2, main flow end to end (API + UI)
+# NEXT TASK: T3, Cline SDK Rule Maintenance Agent (the bonus criterion)
 
-T1 reviewed: 93/93 tests pass and typecheck is clean. Answers to your requests:
-1. External checks are needs_verification but don't block ready_for_review on their own: **approved** (show them as a visible "check at the bank" list under the readiness banner).
-2. Land in a spouse's or minor child's name → owner-name mismatch becomes needs_verification: **approved**.
-3. Orunodoi any-of list and the widow BPL-proof document stay provisional: **approved**.
+T2 reviewed: 150/150 tests and the build pass. Answers to your requests:
+- Leaving out `export const runtime` (because of cacheComponents): **approved**. Keep the comment in each route.
+- "Type it in": a document counts as added **only once its name field (or the main field for that doc type) has a value**.
+  Fix this first (small) with a test.
 
-Note: `.env.local` does NOT exist yet (Das will add `CLINE_API_KEY` and `CLINE_MODEL`). So:
-- `ai.ts` must handle a missing key gracefully: return `{ error: "ai_unavailable" }` and the UI falls back to manual entry. No crash, and no build failure.
-- Tests mock `ai.ts`; no network in tests.
+Then do `tasks/backlog/T3-cline-agent.md` (PLAN briefly at the top of your log entry, then ACT). Notes:
+- `.env.local` now has `CLINE_API_KEY` and `CLINE_MODEL`. Install `@cline/sdk` (Node 22+ is available). If its API differs from .clinerules/03-stack.md, read the package's own README/types in node_modules and follow them; record what you found in `memory-bank/techContext.md`.
+- The agent must work through **tools only** (`getRuleSchema`, `getCurrentRule`, `proposeRule`, `runTests`, `saveProposal`): it proposes data validated by zod, never writes source files.
+- Keep tests offline: mock the agent; unit-test the tools and store directly.
+- Admin page `/admin`: paste box with two "Load demo notice" buttons (the two files in docs/), a live tool-call log, a readable before/after diff, test results (new + regression), and Publish / Reject. Version history per scheme. Published versions take effect in the citizen flow immediately.
+- If `node:sqlite` causes build trouble, a JSON file store under `data/` (gitignored) is acceptable, with the same one-writer rule.
+- Put a manual live check in `scripts/agent-smoke.mjs` that runs both demo notices against the real API and prints the results.
 
-Do `tasks/backlog/T2-main-flow.md`. Adjustments:
-- `src/core/samples.ts` already exists from T1; reuse it, don't duplicate.
-- Default language Assamese, English toggle; keep all fixed strings in `src/i18n.ts` (reuse `src/core/labels.ts` where it fits).
-- The report screen shows: the Eligibility banner, the Readiness banner, then "Fix before you apply" (action_required), then "Please verify" (needs_verification, including external checks), then "OK" (collapsed). Each item shows where to fix it, a source link and "verified on" date, and a "provisional rule" badge where relevant. Benefit amount: central share and state top-up shown separately ("state top-up: confirm locally" when null).
-- Add a clear "Demo mode: fake sample documents" label when a sample is used.
-
-**Done when:** everything in T2's "Done when" holds; `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass; LOG.md updated; committed "T2: main flow".
+**Done when:** T3's "Done when" holds (both demo notices produce passing, publishable proposals; existing regression tests still pass), all checks pass, LOG.md updated, committed "T3: Cline SDK rule maintenance agent".

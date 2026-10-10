@@ -110,3 +110,63 @@ Followed `tasks/NEXT.md` (T2 + adjustments) and `tasks/backlog/T2-main-flow.md`.
 - Confirm dropping `export const runtime = "nodejs"` (see above), or say whether to turn off `cacheComponents` instead.
 - Confirm that "Type it in" should mark a document as added before any field is filled.
 
+
+## T3: Cline SDK rule maintenance agent (run-152706-g9km, 2026-10-10)
+Followed `tasks/NEXT.md` (the "type it in" fix first, then `tasks/backlog/T3-cline-agent.md`). I wrote tests first for every pure module, the store, the service, the tools and the API.
+
+**PLAN (brief)**
+1. Fix: a doc counts only once its main field has a value (`MAIN_FIELD`, `isDocAdded`, `countedDocs`), with tests; the UI sends only counted docs.
+2. Install `@cline/sdk` and read its types in node_modules (findings in techContext). A live probe confirmed tool calling through the Cline API.
+3. Pure core: rule test cases + runner, built-in regression suites, readable diff, proposal policy (enforced by code), JSON merge patch, notice extraction, log summaries.
+4. `store.ts` (only DB writer, `node:sqlite`, WAL, transactions) → `rules.ts` (validate → test → save proposed → publish/reject, registry sync).
+5. `ai.ts` `runToolAgent` (the one model module) + `agents/ruleMaintenance.ts` (5 zod tools, system prompt, event stream).
+6. Admin API (NDJSON stream) + `/admin` UI; make `/` per-request so published versions show at once; `scripts/agent-smoke.mjs`.
+
+**Fix: "type it in"**
+- `src/core/docFields.ts` `MAIN_FIELD` (name; land record → ownerNames; death certificate / BPL proof → null = presence only). `src/core/flow.ts` `isDocAdded`, `countedDocs`. 4 new tests in `flow.test.ts`.
+- `DocsStep.tsx`: a started-but-empty slot is amber with "Type the name on the next screen to add it" (new i18n key `docs.toType`, as + en). It doesn't count toward required docs. `KaagazApp.tsx` sends `countedDocs(docs)` to `/api/check` and to the cover sheet, so the engine reports an empty typed-in doc as missing.
+
+**Files created**
+- Pure core (all tested): `src/core/ruleTests.ts`, `schemes/regression.ts` (4 cases per built-in scheme), `ruleDiff.ts`, `ruleDiffView.ts`, `rulePolicy.ts`, `mergePatch.ts`, `notice.ts`, `agentLog.ts`.
+- Server: `src/server/store.ts`, `rules.ts`, `agents/ruleMaintenance.ts`, `adminApi.ts`.
+- Routes (thin, with the runtime comment): `src/app/api/admin/rules/route.ts` (GET), `propose/route.ts` (POST, NDJSON), `[id]/publish/route.ts`, `[id]/reject/route.ts`.
+- UI: `src/app/admin/page.tsx` (server: demo notices from docs/ + history), `AdminApp.tsx`, `AgentLog.tsx`, `ProposalCard.tsx`, `VersionHistory.tsx`.
+- `scripts/agent-smoke.mjs`: a manual live check. It runs both demo notices against a running server; `--publish` also publishes and checks `/api/check` and the home page.
+- Tests: `src/core/{ruleTests,ruleDiff,ruleDiffView,rulePolicy,mergePatch,notice,agentLog}.test.ts`, `schemes/regression.test.ts`, `src/server/{store,rules,aiAgent,adminApi}.test.ts`, `agents/ruleMaintenance.test.ts`. The agent is always mocked (a scripted fake that calls the real tools); no network.
+
+**Files changed**
+- `src/server/ai.ts`: adds `runToolAgent` (Cline SDK `Agent`, `providerId: "openai-compatible"`, Cline API base URL, `CLINE_API_KEY`/`CLINE_MODEL`). It loads `@cline/sdk` lazily, logs model / promptVersion / inputHash / toolCalls only, retries once if no tool has run yet, then returns `{ error }`; never throws.
+- `src/server/api.ts`: `/api/check` calls `syncRegistry()` first. `src/app/page.tsx`: the catalog is read per request (`connection()` in `<Suspense>`). `src/core/schemes/index.ts`: exports `compareVersions`.
+- `next.config.ts`: `serverExternalPackages` for the `@cline/*` packages (Turbopack can't bundle `@cline/core`). `vitest.config.mts`: `KAAGAZ_DB_PATH=:memory:`. `.gitignore`: `/data/`. `.env.example`: optional `KAAGAZ_DB_PATH`. `package.json`: `@cline/sdk@^0.0.92`.
+- Memory bank: activeContext, progress, systemPatterns, techContext.
+
+**Results**
+- `npm test`: 29 files, **225 passed, 0 failed** (150 before + 75 new). `npm run typecheck`: pass. `npm run lint`: pass. `npm run build`: pass (`/` and `/admin` partial prerender, admin APIs dynamic).
+- **Live agent check** (`scripts/agent-smoke.mjs --publish`, real Cline API, `anthropic/claude-sonnet-5.5`, throwaway DB):
+  - IGNOAPS notice → new scheme `nsap-old-age` 1.0.0 in about 58 s (the first attempt timed out after 2 tool calls and the gateway retried). 11 top-level fields added; **5/5 new tests pass** (₹200 central, age 60 ok, age 59 → needs verification (provisional), missing BPL proof → action required, age 85 ok). All provenance is provisional (Vikaspedia is not an official URL). The agent itself flagged that ₹500 for 80+ is only a note and that the upper age limit and office are placeholders.
+  - Orunodoi notice → `orunodoi-3` 2.0.0 → **2.1.0** in about 21 s. Changes: `version` + `benefit.overrides[0]` (2026-10-01 to 2026-10-31, stateTopUp 1500, provisional, sourceUrl null). **4 new + 4 regression tests pass**.
+  - After Publish: `/api/check` orunodoi-3 on 2026-10-15 → 2.1.0, stateTopUp 1500, override true; on 2026-11-15 → 1250, override false. `nsap-old-age` → 200 central. The home page lists the Old Age Pension; `/admin` shows live 2.1.0 / 1.0.0 and the built-in versions in the history.
+
+**Design decisions / deviations (please review)**
+- **`rule_versions` has two extra columns, `notice` and `summary`.** `publish` re-checks the proposal, and the "verified needs a URL from the notice" rule needs the notice text; the summary is what the reviewer reads first.
+- **Proposal policy is code, not prompt:** the version must go up; ≥ 3 new tests; `verified` is allowed only if carried over unchanged or if its `sourceUrl` is in the notice. `saveProposal` is refused unless every test passes, and `publish` re-runs everything (so a second proposal for the same version can't go live after the first).
+- **Regression tests** = built-in suites + the tests of every published version, so the October tests protect the next Orunodoi version too.
+- **Merge patch for existing schemes** instead of the whole rule: fewer tokens, faster runs, a smaller chance of the model changing something by accident. New schemes are sent as a full rule.
+- **`createTool` does not validate input** (verified), so each tool `safeParse`s its input and returns `{ error }` to the model.
+- `runToolAgent` lives in `ai.ts` to keep rule 3 (one model module). It retries once **only if no tool has run**, because a second run after tool calls could repeat side effects.
+- `/admin` is English (maintainers, not citizens); the agent's Assamese strings are drafts.
+- The UI shows the IGNOAPS "new scheme" diff as one entry per top-level field (11 entries); nested detail is in the formatted values.
+
+**Open issues**
+- **`/admin` has no authentication.** Anyone who can reach the server can run the agent (it costs API credits) and publish rules. Fine for the local demo; must be decided before any deployment.
+- The engine supports one flat benefit amount, so IGNOAPS's ₹500 for 80+ is a note, not computed. The agent also used 120 as an upper age placeholder, because `AgeRange.max` is required.
+- A live run takes about 20–60 s; a model timeout can cost one retry (seen once in the IGNOAPS run).
+- I did not click through `/admin` or `/` in a real browser here (no browser automation). Both were checked through the server-rendered HTML and the APIs on `next start`.
+- `tasks/NEXT.md`, `.cline-runs/index.md` and `.cline-runs/run-144641-b8cr.log` were already modified before this run. I committed them as they are with `git add -A`, per the workflow, and did not edit them.
+
+**Requests for Claude**
+- Decide on `/admin` protection for the demo (e.g. a shared passcode in `.env.local`, or local-only), or confirm none.
+- Should the engine support age-banded benefits (IGNOAPS ₹200 for 60–79, ₹500 for 80+), and should `AgeRange.max` become optional (IGNOAPS has no upper limit)? Both are small schema/engine changes outside T3's scope.
+- Please confirm the two extra `rule_versions` columns (`notice`, `summary`).
+
+

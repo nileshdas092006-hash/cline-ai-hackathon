@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   DOC_FIELDS,
+  MAIN_FIELD,
   blankDoc,
   confirmField,
+  countedDocs,
   docSlotsFor,
   fieldText,
+  isDocAdded,
   needsConfirmation,
   relevantAnswers,
   removeDoc,
@@ -101,6 +104,37 @@ describe("doc list helpers", () => {
     expect(list.map((d) => d.docType)).toEqual(["aadhaar", "bank_passbook", "land_record"]);
     expect(list[0].fields.name).toBe("X Y");
     expect(removeDoc(list, "bank_passbook").map((d) => d.docType)).toEqual(["aadhaar", "land_record"]);
+  });
+
+  it("a typed-in document counts as added only once its main field has a value", () => {
+    expect(MAIN_FIELD.aadhaar).toBe("name");
+    expect(MAIN_FIELD.land_record).toBe("ownerNames");
+    expect(isDocAdded(blankDoc("aadhaar"))).toBe(false);
+    expect(isDocAdded(setField(blankDoc("aadhaar"), "dob", "12/03/1975"))).toBe(false); // not the main field
+    expect(isDocAdded(setField(blankDoc("aadhaar"), "name", "   "))).toBe(false);
+    expect(isDocAdded(setField(blankDoc("aadhaar"), "name", "Ramesh Kumar Sharma"))).toBe(true);
+    expect(isDocAdded(blankDoc("land_record"))).toBe(false);
+    expect(isDocAdded(setField(blankDoc("land_record"), "ownerNames", "Ramesh Kumar Sharma"))).toBe(true);
+  });
+
+  it("documents we read nothing from count as soon as they are added (presence is all that matters)", () => {
+    expect(MAIN_FIELD.death_certificate).toBeNull();
+    expect(MAIN_FIELD.bpl_proof).toBeNull();
+    expect(isDocAdded(blankDoc("death_certificate"))).toBe(true);
+    expect(isDocAdded(blankDoc("bpl_proof"))).toBe(true);
+  });
+
+  it("every doc type's main field is one of the fields we ask for", () => {
+    for (const [docType, field] of Object.entries(MAIN_FIELD)) {
+      const fields = DOC_FIELDS[docType as keyof typeof DOC_FIELDS];
+      if (field === null) expect(fields).toEqual([]);
+      else expect(fields).toContain(field);
+    }
+  });
+
+  it("countedDocs drops empty typed-in documents, so the engine reports them as missing", () => {
+    const docs = [setField(blankDoc("aadhaar"), "name", "Sunita Devi"), blankDoc("bank_passbook"), blankDoc("death_certificate")];
+    expect(countedDocs(docs).map((d) => d.docType)).toEqual(["aadhaar", "death_certificate"]);
   });
 
   it("relevantAnswers keeps only this scheme's questions", () => {
