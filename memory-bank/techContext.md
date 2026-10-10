@@ -27,6 +27,13 @@
 | `typecheck` | `tsc --noEmit` |
 | `test` | `vitest run` |
 | `test:watch` | `vitest` |
+| `demo:reset` | `node --env-file-if-exists=.env.local … scripts/demo-reset.mjs` (clears `rule_versions`) |
+
+## Gotchas found in T4
+- Node 24 runs `.ts` imports from a `.mjs` script directly (type stripping), but warns `MODULE_TYPELESS_PACKAGE_JSON`; the npm script passes `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON`.
+- The ESLint rule `react-hooks/set-state-in-effect` rejects calling a function that sets state inside `useEffect`; do the fetch inline in the effect with a `live` flag.
+- Windows: an open `node:sqlite` file can't be removed by `rmSync` in a test's `afterEach`; close every `RuleStore` first.
+- Smoke-testing with `next start`: if the shell has an empty `CLINE_MODEL`, set it from `.env.local` for the process (see T2) or the decoder answers `ai_unavailable`.
 
 ## Gotchas found in T0
 - Vitest 5 needs `@types/node` ≥ 22 (peer dep), so `@types/node` is `^22`.

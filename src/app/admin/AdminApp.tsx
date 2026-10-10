@@ -2,9 +2,10 @@
 // The rule maintainer's flow: paste a notice → the Cline SDK agent works (live tool log) →
 // readable diff + test results → a person publishes or rejects. Version history per scheme.
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, btn } from "../_components/ui";
 import { AgentLog, type LogLine } from "./AgentLog";
+import { setStoredPasscode, useStoredPasscode } from "./passcode";
 import { ProposalCard, type Proposal } from "./ProposalCard";
 import { VersionHistory, type SchemeHistory } from "./VersionHistory";
 
@@ -37,7 +38,21 @@ async function readNdjson(body: ReadableStream<Uint8Array>, onLine: (value: unkn
   if (buffer.trim()) onLine(JSON.parse(buffer));
 }
 
-export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initialHistory: SchemeHistory[] }) {
+const WRONG_PASSCODE = "Wrong or missing passcode. Please enter it again.";
+
+export function AdminApp({
+  demos,
+  initialHistory,
+  passcodeRequired,
+}: {
+  demos: DemoNotice[];
+  initialHistory: SchemeHistory[];
+  passcodeRequired: boolean;
+}) {
+  const passcode = useStoredPasscode();
+  const locked = passcodeRequired && passcode === "";
+  /** Headers for every /api/admin/* request (the passcode only when one is stored). */
+  const auth = useCallback((extra: Record<string, string> = {}): Record<string, string> => (passcode ? { ...extra, "x-admin-passcode": passcode } : extra), [passcode]);
   const [notice, setNotice] = useState("");
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<LogLine[]>([]);
@@ -49,12 +64,39 @@ export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initi
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/rules", { cache: "no-store" });
+      const res = await fetch("/api/admin/rules", { cache: "no-store", headers: auth() });
+      if (res.status === 401) {
+        setMessage({ tone: "error", text: WRONG_PASSCODE });
+        setStoredPasscode("");
+        return;
+      }
       if (res.ok) setHistory(((await res.json()) as { schemes: SchemeHistory[] }).schemes);
     } catch {
       // The history is a convenience; the page still works without it.
     }
-  }, []);
+  }, [auth]);
+
+  // Protected mode: the server sends no history until the passcode is known; load it once it is.
+  useEffect(() => {
+    if (!passcodeRequired || !passcode) return;
+    let live = true;
+    fetch("/api/admin/rules", { cache: "no-store", headers: { "x-admin-passcode": passcode } })
+      .then(async (res) => {
+        if (!live) return;
+        if (res.status === 401) {
+          setMessage({ tone: "error", text: WRONG_PASSCODE });
+          setStoredPasscode("");
+        } else if (res.ok) {
+          setHistory(((await res.json()) as { schemes: SchemeHistory[] }).schemes);
+        }
+      })
+      .catch(() => {
+        // The history is a convenience; the page still works without it.
+      });
+    return () => {
+      live = false;
+    };
+  }, [passcodeRequired, passcode]);
 
   function onEvent(e: AgentEvent) {
     if (e.type === "tool") {
@@ -79,10 +121,15 @@ export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initi
     try {
       const res = await fetch("/api/admin/rules/propose", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: auth({ "Content-Type": "application/json" }),
         body: JSON.stringify({ notice }),
         signal: abort.signal,
       });
+      if (res.status === 401) {
+        setResult({ ok: false, error: "passcode_required", message: WRONG_PASSCODE });
+        setStoredPasscode("");
+        return;
+      }
       if (!res.ok || !res.body) {
         setResult({ ok: false, error: "request_failed", message: `The request was refused (${res.status}).` });
         return;
@@ -100,7 +147,12 @@ export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initi
   async function decide(id: number, decision: "publish" | "reject") {
     setMessage(null);
     try {
-      const res = await fetch(`/api/admin/rules/${id}/${decision}`, { method: "POST" });
+      const res = await fetch(`/api/admin/rules/${id}/${decision}`, { method: "POST", headers: auth() });
+      if (res.status === 401) {
+        setMessage({ tone: "error", text: WRONG_PASSCODE });
+        setStoredPasscode("");
+        return;
+      }
       const body = (await res.json()) as { row?: { schemeId: string; version: string }; errors?: string[] };
       if (!res.ok || !body.row) {
         setMessage({ tone: "error", text: (body.errors ?? ["Not allowed."]).join(" ") });
@@ -138,6 +190,27 @@ export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initi
         </Link>
       </header>
 
+      {!passcodeRequired && (
+        <p role="note" className="rounded-xl border-2 border-dashed border-amber-600 bg-amber-50 px-3 py-2 font-semibold text-amber-950">
+          ⚠️ Demo mode: unprotected. Anyone who can open this page can run the agent and publish rules. Set ADMIN_PASSCODE in .env.local to
+          require a passcode.
+        </p>
+      )}
+
+      {message && locked && (
+        <p role="alert" className="rounded-xl bg-red-50 p-3 font-medium text-red-900">
+          {message.text}
+        </p>
+      )}
+      {locked ? (
+        <PasscodeBox
+          onSubmit={(p) => {
+            setMessage(null);
+            setStoredPasscode(p);
+          }}
+        />
+      ) : (
+        <>
       <Card>
         <label htmlFor="notice" className="text-lg font-semibold">
           Scheme notice
@@ -185,7 +258,45 @@ export function AdminApp({ demos, initialHistory }: { demos: DemoNotice[]; initi
       {result && result.ok && <ProposalCard proposal={result.proposal} onDecide={decide} />}
 
       <VersionHistory schemes={history} onDecide={decide} />
+        </>
+      )}
+      {passcodeRequired && !locked && (
+        <button type="button" className={`${btn.quiet} self-start`} onClick={() => setStoredPasscode("")}>
+          🔒 Lock (forget the passcode in this tab)
+        </button>
+      )}
     </div>
+  );
+}
+
+function PasscodeBox({ onSubmit }: { onSubmit: (passcode: string) => void }) {
+  const [value, setValue] = useState("");
+  return (
+    <Card>
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (value.trim()) onSubmit(value.trim());
+        }}
+      >
+        <label htmlFor="admin-passcode" className="text-lg font-semibold">
+          🔒 Admin passcode
+        </label>
+        <p className="text-zinc-700">This page is protected. Enter the passcode from the organiser. It is kept only in this browser tab.</p>
+        <input
+          id="admin-passcode"
+          type="password"
+          autoComplete="current-password"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="min-h-12 w-full rounded-xl border-2 border-zinc-300 bg-white px-3 py-2 text-base focus-visible:outline-3 focus-visible:outline-teal-500"
+        />
+        <button type="submit" className={`${btn.primary} self-start`} disabled={value.trim() === ""}>
+          Unlock
+        </button>
+      </form>
+    </Card>
   );
 }
 

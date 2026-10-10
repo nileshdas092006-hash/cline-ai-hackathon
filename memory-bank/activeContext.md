@@ -1,6 +1,23 @@
 # Active context
 
-## Current state (after T3)
+## Current state (after T4, trimmed)
+T4 is done (items 1–4; polish = loading state on `/` only). 264 tests pass; typecheck, lint and build are clean.
+- **Admin passcode:** optional `ADMIN_PASSCODE` in `.env.local`. When set, `/api/admin/*` needs the header `x-admin-passcode` (`src/server/adminAuth.ts`, 401 otherwise) and `/admin` shows a passcode box (kept in sessionStorage). When not set, `/admin` shows an amber "Demo mode: unprotected" banner.
+- **Guardrails audit:** `src/guardrails.test.ts` (renders ReportStep/CoverSheet/CheckItem to static HTML + scans the source). One fix: the printed cover sheet now prints "Source · verified on · Provisional rule" per listed check. The checklist is in `tasks/LOG.md`.
+- **Rejection decoder** `/decode`: textarea → `POST /api/decode` → `ai.ts classifyRejection()` (zod `RawClassification`: one `RejectionCode` + confidence) → pure `decodeResult()` in `src/core/decode.ts`. ≥ 0.7 and not UNKNOWN → matched, with the fixed steps from `rejectionCodes.ts`; otherwise needs verification + `ASK_AT_OFFICE`. Digits are redacted before the model sees them. Linked from home ("Got a rejection? Decode it"). Works without AI (needs verification).
+- **`npm run demo:reset`:** `scripts/demo-reset.mjs` → `RuleStore.resetAll()` (one transaction). A running server drops the reset versions on its next request (`syncRegistry` → `resetRegistry`). The real `data/kaagaz.db` was reset in this run (it had 2 old proposals).
+- **`AgeRange.max` is optional** (no upper limit, "60 or older").
+
+## Decisions made in T4
+- The passcode protects the API (the real boundary); the page itself is just a shell. Constant-time compare on SHA-256 digests; the passcode is never logged or echoed.
+- The decoder's model only classifies; the status, steps and questions are code. A low-confidence guess is shown only as "It might be: … please confirm at the office".
+- `demo-reset.mjs` imports `src/server/store.ts` directly (Node 24 type stripping, `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON`) so `store.ts` stays the only DB writer.
+- The new Assamese strings (`decode.*`, `ASK_AT_OFFICE`, "বা তাতকৈ বেছি") are drafts.
+
+## Next step
+T-last: freeze, README (a `docs/README-draft.md` exists, not by Cline), demo path check incl. 360px + phone click-through of `/`, `/admin`, `/decode`; native-speaker review of the Assamese.
+
+## Previous state (after T3)
 T3 is done: the **Rule Maintenance Agent** works end to end against the live Cline API. On `/admin` a maintainer pastes a notice or loads a demo notice. A `@cline/sdk` Agent works only through 5 tools (`getRuleSchema`, `getCurrentRule`, `proposeRule`, `runTests`, `saveProposal`), and the page shows a live tool-call log, a readable before/after diff, test results (new + regression), Publish / Reject, and version history per scheme. Published versions are live at once in `/` and `/api/check`, and the old versions are kept.
 Live run (smoke, 2026-10-10): the IGNOAPS notice gave new scheme `nsap-old-age` 1.0.0 (5/5 new tests); the Orunodoi notice gave `orunodoi-3` 2.0.0 → 2.1.0 with an Oct 1–31 2026 override (4 new + 4 regression tests pass). After publishing, `/api/check` returns 1500 on 2026-10-15 and 1250 on 2026-11-15, and the home page lists the Old Age Pension.
 225 tests pass; typecheck, lint and build are clean.
@@ -38,5 +55,4 @@ T2 (main flow) is done. One mobile flow on `/` (client component `src/app/_compo
 - The registry is in-memory: `registerScheme` validates, rejects a duplicate id+version and keeps old versions. T3 will persist versions in SQLite and register them at startup.
 - Assamese strings in `labels.ts`, the scheme packs and `rejectionCodes.ts` are drafts awaiting native-speaker review (Das).
 
-## Next step
-T4: rejection decoder + polish. Before the demo: a phone click-through of `/` and `/admin`, native-speaker review of `src/i18n.ts` and of the Assamese text the agent writes, and a decision on protecting `/admin`.
+

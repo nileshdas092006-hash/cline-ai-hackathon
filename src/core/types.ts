@@ -172,13 +172,14 @@ export type ExternalCheckRule = z.infer<typeof ExternalCheckRule>;
 export const AgeRange = z
   .object({
     min: z.int().nonnegative(),
-    max: z.int().nonnegative(),
+    /** Omitted = no upper age limit (e.g. the Old Age Pension, 60+). */
+    max: z.int().nonnegative().optional(),
     dobFrom: DocType,
     aboveMaxHintEn: z.string().optional(),
     aboveMaxHintAs: z.string().optional(),
     provenance: RuleProvenance,
   })
-  .refine((a) => a.min <= a.max, { message: "min must be ≤ max" });
+  .refine((a) => a.max === undefined || a.min <= a.max, { message: "min must be ≤ max" });
 export type AgeRange = z.infer<typeof AgeRange>;
 
 export const BenefitOverride = z

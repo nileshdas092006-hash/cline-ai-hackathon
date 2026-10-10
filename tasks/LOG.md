@@ -170,3 +170,55 @@ Followed `tasks/NEXT.md` (the "type it in" fix first, then `tasks/backlog/T3-cli
 - Please confirm the two extra `rule_versions` columns (`notice`, `summary`).
 
 
+## T4 (trimmed): guardrails, admin passcode, decoder, demo reset (run-165739-gi16, 2026-10-10)
+Followed `tasks/NEXT.md` in order (items 1–4 done; item 5 only the loading state on `/`). About 35 minutes.
+
+**1. Admin passcode**
+- `src/server/adminAuth.ts`: optional `ADMIN_PASSCODE`. When it's set, all 4 `/api/admin/*` routes need the header `x-admin-passcode` (constant-time compare). Otherwise they return 401 `{ error: "passcode_required" }`, which never echoes the passcode. Unset or blank means open.
+- `/admin`: when protected, the server sends no history and the page shows a passcode box. The passcode is kept in sessionStorage (`src/app/admin/passcode.ts`, `useSyncExternalStore`), sent on every admin fetch, and cleared on a 401. There is also a "Lock" button. When unprotected, the page shows an amber **"Demo mode: unprotected"** banner. `.env.example` now has `ADMIN_PASSCODE=`.
+- Tests: `src/server/adminAuth.test.ts` (4: pure checks + the real route handlers with the env var set; the agent never runs without the passcode).
+
+**2. Guardrails audit** (`src/guardrails.test.ts`, 14 tests, plus the existing tests listed below)
+| Guardrail | Result | Evidence |
+|---|---|---|
+| Aadhaar masked in UI | ✅ | `ExtractedDoc.aadhaarLast4` must be exactly 4 digits (12-digit values are rejected); the confirm field has maxLength 4; `extraction.test.ts` property: a 12-digit Aadhaar never survives. |
+| … in logs | ✅ | Only `ai.ts` logs, through typed `AiLogEntry` (model, promptVersion, inputHash, outcome). `ai.test.ts` and `classify.test.ts` check that no name, digits or key appear. The decoder also masks 12-digit runs to the last 4 and other 9+ digit runs to `[number]` **before** sending to the model (`redactForModel`, property-tested). |
+| … in print | ✅ | The cover sheet is rendered in the test: `XXXX XXXX 4821`, no 12-digit run, no account number. |
+| No images stored | ✅ | No app code writes files; browser storage is only used for the admin passcode; only `store.ts` opens SQLite; its one table (`rule_versions`) has no image/photo/Aadhaar column. |
+| All AI output zod-validated | ✅ | Only `ai.ts` calls a model; `RawExtraction.safeParse` and `RawClassification.safeParse` run on every reply; agent tools re-validate their input (`checked()`). |
+| Disclaimer footer on every report | ✅ | `ReportStep` and `CoverSheet` are rendered for samples A/B/C in both languages, each with a `<footer>` holding both disclaimers. Property: every engine report carries them. `/decode` has its own bilingual disclaimer footer. |
+| Provenance + "verified on" + provisional badge on every check | ✅ (1 fix) | `CheckItem` is rendered for every check in A/B/C × as/en: it shows the source title (link or "no official link yet"), "verified on", and the badge exactly when provisional. **Fixed:** the printed cover sheet only showed "(provisional)", so it now prints "Source: … · verified on … · Provisional rule" for each listed check. |
+| Fuzzy score never `ok` | ✅ | The existing fast-check property in `evaluate.test.ts` covers this; it is also checked on samples A/B/C (only `same` → ok). |
+
+**3. Rejection decoder** (`/decode`)
+- `src/core/decode.ts` (pure): `RawClassification` (zod: `RejectionCode` enum + confidence 0–1), `decodeResult()`. A known code with confidence ≥ 0.7 → `matched` with fixed steps from `rejectionCodes.ts`. Otherwise (UNKNOWN, < 0.7, or no AI) → `needs_verification`, showing the UNKNOWN steps and `ASK_AT_OFFICE` (4 bilingual questions); a low-confidence guess appears only as "It might be: … please confirm". `redactForModel()`. `MAX_DECODE_CHARS` is 2000.
+- `ai.ts` `classifyRejection()`: text only, `temperature: 0`, prompt `classify-rejection-v1` (it lists the codes and treats the pasted text as data only); zod check, one retry, `{ error }` fallback; never throws.
+- `POST /api/decode` (`handleDecode` in `api.ts`): always returns a useful answer, even when the AI is unavailable (`ai: "ai_unavailable"` + needs_verification). Bad input → 400 before any AI call.
+- UI: `src/app/decode/{page,DecodeApp,DecodeAnswer}.tsx`, Assamese by default with an English toggle; the steps are also shown in the other language (collapsed). Home: a "Got a rejection? Decode it" card under the scheme list. Strings are in `i18n.ts` (`decode.*`, both languages).
+- Tests: `core/decode.test.ts` (9), `server/classify.test.ts` (4, mocked fetch), `server/apiDecode.test.ts` (4, mocked `ai.ts`), including the backlog's done-when case.
+
+
+**4. `npm run demo:reset`**
+- `RuleStore.resetAll()` deletes all rows and resets the id sequence in one transaction. `scripts/demo-reset.mjs` (Node type-stripping imports `store.ts`, so `store.ts` stays the only writer; reads `.env.local` for `KAAGAZ_DB_PATH`).
+- A running server picks the reset up too: `syncRegistry()` rebuilds the registry from the built-ins (`resetRegistry()` in `schemes/index.ts`) when it holds a version that is no longer published.
+- Tests: `store.test.ts` (+1) and `demoReset.test.ts` (2: fresh process → 3 original schemes at their built-in versions; running process → drops 2.1.0).
+
+**Also (approved by Claude, under 10 min):** `AgeRange.max` is now optional (no upper limit, e.g. IGNOAPS 60+). Messages read "60 or older" / "৬০ বা তাতকৈ বেছি"; the diff view shows "60+ years". +1 test.
+**Item 5 (polish):** `/` now shows a bilingual "Loading…" status instead of "…" while the catalog loads. I did not do a 360px check (no browser here). New UI uses the same `max-w-xl`, full-width, ≥ 48px controls as the existing screens.
+
+**Results**
+- `npm test`: 35 files, **264 passed, 0 failed** (225 before + 39 new). `npm run typecheck`, `npm run lint`, `npm run build`: pass (`/decode` static, `/api/decode` dynamic).
+- Live check (`next start`, real Cline API): "Payment failed: Aadhaar not seeded with bank account" → `matched AADHAAR_NOT_SEEDED_BANK` 0.98 with Assamese steps; a nonsense message → `UNKNOWN` → needs_verification. The log lines hold only fn/model/promptVersion/inputHash/outcome/ms. Without a key: needs_verification + `ai_unavailable`.
+- Passcode live check: with `ADMIN_PASSCODE` set, no header or the wrong one → 401 (list and publish), the right one → 200. Without it, `/admin` shows the "Demo mode: unprotected" banner.
+- `npm run demo:reset` on the real `data/kaagaz.db` removed the 2 leftover T3 proposals (orunodoi-3 2.1.0, nsap-old-age 1.0.0, both `proposed`); a backup is in `%TEMP%\kaagaz-before-reset.db`. Home then listed pm-kisan, orunodoi-3, nsap-widow (all 2.0.0), with no Old Age Pension.
+
+**Open issues**
+- The 360px check and the phone click-through of `/`, `/admin` and `/decode` are still not done (no browser automation here).
+- The new Assamese strings (`i18n.ts` `decode.*`, `ASK_AT_OFFICE`, the "or older" age text) are drafts and need native-speaker review.
+- The passcode only protects the API; the `/admin` page itself (demo notice texts) still loads. That's fine, since it holds no data until the passcode is entered.
+- `docs/README-draft.md` appeared in the working tree during this run (not created by Cline). It is committed as-is with `git add -A`, like the pre-modified `tasks/NEXT.md` and `.cline-runs/*`.
+
+**Requests for Claude**
+- Should the T3 agent prompt mention that `ageRange.max` may now be omitted (instead of using 120)? `ruleMaintenance.ts` was out of scope, so I left it unchanged.
+- Age-banded payments are recorded as future scope in `memory-bank/progress.md`, as you asked.
+

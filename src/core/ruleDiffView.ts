@@ -83,7 +83,10 @@ export function formatValue(v: unknown): string {
       source(v.provenance),
     );
   }
-  if ("min" in v && "max" in v) return join(`${String(v.min)}–${String(v.max)} years (date of birth from ${String(v.dobFrom)})`, source(v.provenance));
+  if ("min" in v && "dobFrom" in v) {
+    const years = v.max === undefined ? `${String(v.min)}+ years` : `${String(v.min)}–${String(v.max)} years`;
+    return join(`${years} (date of birth from ${String(v.dobFrom)})`, source(v.provenance));
+  }
   if ("textEn" in v) return join(`"${String(v.textEn)}"`, source(v.provenance));
   if ("docType" in v) return join(`${String(v.docType)}${v.fixWhere ? ` (from ${String(v.fixWhere)})` : ""}`, source(v.provenance));
   if ("status" in v && "sourceTitle" in v) return join(source(v), typeof v.clause === "string" && `"${v.clause}"`, typeof v.sourceUrl === "string" && v.sourceUrl);

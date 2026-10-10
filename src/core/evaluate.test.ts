@@ -4,7 +4,7 @@ import { evaluate } from "./evaluate";
 import { nameMatch } from "./nameMatch";
 import { SAMPLES } from "./samples";
 import { getScheme } from "./schemes";
-import { Report, type Answers, type Check, type ExtractedDoc, type SchemeRule } from "./types";
+import { Report, SchemeRule, type Answers, type Check, type ExtractedDoc } from "./types";
 
 const AS_OF = "2026-10-10";
 
@@ -232,6 +232,15 @@ describe("evaluate: widow pension (IGNWPS)", () => {
     expect(r.benefit.centralShare).toBe(300);
     expect(r.benefit.stateTopUp).toBeNull();
     expect(r.benefit.total).toBeNull();
+  });
+  it("an age range without max (e.g. IGNOAPS 60+) has no upper limit: age 105 → ok, 59 → not eligible", () => {
+    const openEnded = SchemeRule.parse({ ...widow, id: "open-age", ageRange: { ...widow.ageRange!, min: 60, max: undefined } });
+    expect(openEnded.ageRange?.max).toBeUndefined();
+    const old = evaluate(openEnded, widowDocs("1921-01-01"), widowYes, AS_OF);
+    expect(check(old, "age").result).toBe("ok");
+    expect(check(old, "age").messageEn).toMatch(/60 or older/);
+    expect(check(evaluate(openEnded, widowDocs("1967-10-11"), widowYes, AS_OF), "age").result).toBe("action_required");
+    expect(SchemeRule.safeParse({ ...widow, ageRange: { ...widow.ageRange!, min: 80, max: 60 } }).success).toBe(false);
   });
   it("not BPL → not_eligible", () => {
     expect(evaluate(widow, widowDocs("1970-01-01"), { ...widowYes, bpl_household: false }, AS_OF).eligibility).toBe("not_eligible");

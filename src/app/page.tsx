@@ -17,7 +17,13 @@ async function LiveApp() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<p className="p-6 text-center text-zinc-600">…</p>}>
+    <Suspense
+      fallback={
+        <p role="status" className="p-6 text-center text-lg text-zinc-600">
+          ⏳ লোড হৈ আছে… <span lang="en">Loading…</span>
+        </p>
+      }
+    >
       <LiveApp />
     </Suspense>
   );

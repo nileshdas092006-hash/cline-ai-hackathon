@@ -71,7 +71,10 @@ export function CoverSheet({
                   <li key={c.id} className="mt-1">
                     {pick(lang, c.messageEn, c.messageAs)}
                     {c.fixWhere !== "none" && ` [${r.where}: ${fixWhereLabel(lang, c.fixWhere)}]`}
-                    {c.provenance.status === "provisional" && ` (${r.provisional})`}
+                    <span className="block text-sm">
+                      {r.source}: {c.provenance.sourceTitle} · {r.verifiedOn(c.provenance.verifiedOn)}
+                      {c.provenance.status === "provisional" && ` · ${r.provisional}`}
+                    </span>
                   </li>
                 ))}
               </ol>

@@ -166,6 +166,19 @@ export class RuleStore {
     return (rows as unknown as DbRow[]).map(fromDb);
   }
 
+  /**
+   * Demo reset: deletes every proposed, published and rejected version, so only the built-in
+   * (version 1, in code) rule packs remain. Returns the number of rows removed.
+   */
+  resetAll(): number {
+    return this.tx(() => {
+      const res = this.db.prepare("DELETE FROM rule_versions").run();
+      // Restart ids at 1 (the table may not have a sequence row yet).
+      this.db.prepare("DELETE FROM sqlite_sequence WHERE name = 'rule_versions'").run();
+      return Number(res.changes);
+    });
+  }
+
   close(): void {
     this.db.close();
   }

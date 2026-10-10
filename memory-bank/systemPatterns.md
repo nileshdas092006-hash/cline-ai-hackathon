@@ -21,6 +21,7 @@
 - `src/server/agents/ruleMaintenance.ts` (T3): `@cline/sdk` Rule Maintenance Agent: system prompt + 5 `createTool` tools (zod inputs, re-validated with `checked()`), session state, `runRuleAgent(notice)` → streams `AgentEvent`s; the result comes from what was saved through the tools, never from the agent's text.
 - `src/server/ai.ts` also has `runToolAgent` (Cline SDK `Agent`, `openai-compatible` → Cline API): it is still the only module that talks to a model.
 - `src/server/adminApi.ts` + `src/app/api/admin/rules/**` (T3): propose (NDJSON stream), list (history + diff), `[id]/publish`, `[id]/reject`. `src/app/admin/` is the maintainer UI.
+- T4: `src/server/adminAuth.ts` (optional `ADMIN_PASSCODE` → `adminGuard(req)` in every `/api/admin/*` route); `src/core/decode.ts` (pure: `RawClassification`, `decodeResult`, `ASK_AT_OFFICE`, `redactForModel`); `ai.ts classifyRejection()`; `api.ts handleDecode` + `src/app/api/decode/route.ts`; `src/app/decode/` UI; `RuleStore.resetAll()` + `scripts/demo-reset.mjs`; registry `resetRegistry()` / `runtimeVersionKeys()` (used by `syncRegistry` after a reset); `src/guardrails.test.ts` (trust-rule audit).
 - `src/app/api/**/route.ts`: thin handlers on the Node.js runtime (the default; an explicit `runtime` export breaks the build with `cacheComponents`).
 - `src/app/**`: UI (Assamese default, English toggle; fixed strings in `src/i18n.ts`). Calls API routes, never the model.
 

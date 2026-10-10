@@ -57,4 +57,24 @@ export function questionsFor(scheme: SchemeRule): Question[] {
   ];
 }
 
-for (const s of [pmKisan, orunodoi3, nsapWidow]) registerScheme(s);
+/** The built-in rule packs (version 1, in code). */
+const BUILTINS = [pmKisan, orunodoi3, nsapWidow] as const;
+const builtinKeys = new Set<string>(BUILTINS.map((s) => `${s.id}@${s.version}`));
+
+/** True for a built-in (in-code) scheme version. */
+export function isBuiltinVersion(id: string, version: string): boolean {
+  return builtinKeys.has(`${id}@${version}`);
+}
+
+/** Every registered version that is not built in, as "id@version". */
+export function runtimeVersionKeys(): string[] {
+  return [...registry.values()].flat().map((s) => `${s.id}@${s.version}`).filter((k) => !builtinKeys.has(k));
+}
+
+/** Back to the built-in packs only (used after a demo reset removed published versions). */
+export function resetRegistry(): void {
+  registry.clear();
+  for (const s of BUILTINS) registerScheme(s);
+}
+
+resetRegistry();

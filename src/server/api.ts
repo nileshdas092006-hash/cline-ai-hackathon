@@ -1,10 +1,11 @@
 // Request schemas and handlers for the API routes. The route files are thin wrappers.
 // /api/check runs the deterministic engine only (no model). /api/extract goes through ai.ts.
 import { z } from "zod";
+import { MAX_DECODE_CHARS, decodeResult } from "@/core/decode";
 import { evaluate } from "@/core/evaluate";
 import { getScheme } from "@/core/schemes";
 import { Answers, DocType, ExtractedDoc, IsoDate } from "@/core/types";
-import { extractDocument } from "@/server/ai";
+import { classifyRejection, extractDocument } from "@/server/ai";
 import { getRuleService } from "@/server/rules";
 
 /** Base64 of a ~6 MB image is ~8 MB; refuse anything bigger before parsing further. */
@@ -73,5 +74,30 @@ export async function handleExtract(req: Request): Promise<Response> {
     return json(result);
   } catch {
     return json({ error: "ai_failed" }, 502);
+  }
+}
+
+export const DecodeRequest = z.object({ text: z.string().trim().min(1).max(MAX_DECODE_CHARS) });
+
+/**
+ * POST /api/decode { text } → { result: DecodeResult, ai: "ok" | "ai_unavailable" | "ai_failed" }.
+ * The model only proposes a code + confidence; decodeResult (pure code) decides what is shown.
+ * Without an AI answer the citizen still gets "needs verification" + what to ask at the office.
+ */
+export async function handleDecode(req: Request): Promise<Response> {
+  const body = await readJson(req);
+  if (!body.ok) return json({ error: "invalid_json" }, 400);
+  const parsed = DecodeRequest.safeParse(body.value);
+  if (!parsed.success) return json({ error: "invalid_request", issues: issues(parsed.error) }, 400);
+
+  try {
+    const ai = await classifyRejection(parsed.data.text);
+    if ("error" in ai) {
+      if (ai.error === "invalid_text") return json({ error: "invalid_request" }, 400);
+      return json({ result: decodeResult(null), ai: ai.error });
+    }
+    return json({ result: decodeResult(ai), ai: "ok" });
+  } catch {
+    return json({ result: decodeResult(null), ai: "ai_failed" });
   }
 }

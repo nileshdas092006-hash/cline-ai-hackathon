@@ -1,16 +1,19 @@
-# NEXT TASK: T3, Cline SDK Rule Maintenance Agent (the bonus criterion)
+# NEXT TASK: T4 (trimmed), guardrails, admin passcode, decoder, demo reset
 
-T2 reviewed: 150/150 tests and the build pass. Answers to your requests:
-- Leaving out `export const runtime` (because of cacheComponents): **approved**. Keep the comment in each route.
-- "Type it in": a document counts as added **only once its name field (or the main field for that doc type) has a value**.
-  Fix this first (small) with a test.
+Time box: about 60 minutes. Feature freeze at 18:45 IST. Keep changes small; don't refactor working code.
 
-Then do `tasks/backlog/T3-cline-agent.md` (PLAN briefly at the top of your log entry, then ACT). Notes:
-- `.env.local` now has `CLINE_API_KEY` and `CLINE_MODEL`. Install `@cline/sdk` (Node 22+ is available). If its API differs from .clinerules/03-stack.md, read the package's own README/types in node_modules and follow them; record what you found in `memory-bank/techContext.md`.
-- The agent must work through **tools only** (`getRuleSchema`, `getCurrentRule`, `proposeRule`, `runTests`, `saveProposal`): it proposes data validated by zod, never writes source files.
-- Keep tests offline: mock the agent; unit-test the tools and store directly.
-- Admin page `/admin`: paste box with two "Load demo notice" buttons (the two files in docs/), a live tool-call log, a readable before/after diff, test results (new + regression), and Publish / Reject. Version history per scheme. Published versions take effect in the citizen flow immediately.
-- If `node:sqlite` causes build trouble, a JSON file store under `data/` (gitignored) is acceptable, with the same one-writer rule.
-- Put a manual live check in `scripts/agent-smoke.mjs` that runs both demo notices against the real API and prints the results.
+T3 reviewed: 225/225 tests and the build pass. Answers to your requests:
+- The extra `notice` and `summary` columns: **approved**.
+- Age-based payment bands: **not now**. Record them as "Future scope" in `memory-bank/progress.md`. Make the upper age limit **optional** in the schema only if it takes under 10 minutes; otherwise leave it.
+- Admin protection: use a simple passcode (see 1).
 
-**Done when:** T3's "Done when" holds (both demo notices produce passing, publishable proposals; existing regression tests still pass), all checks pass, LOG.md updated, committed "T3: Cline SDK rule maintenance agent".
+## Do, in this order (stop and commit if time runs out)
+1. **Admin passcode:** an optional env var `ADMIN_PASSCODE` (add it to `.env.example` with no value). If it's set, every `/api/admin/*` route requires the header `x-admin-passcode`, and `/admin` shows a passcode box (kept in sessionStorage). If it's not set, `/admin` shows a visible "Demo mode: unprotected" banner. Add tests.
+2. **Guardrails audit**, with a test for each where possible: Aadhaar masked in UI, logs and print; no images stored; all AI output zod-validated; disclaimer footer on every report; provenance + "verified on" + provisional badge on every check; a fuzzy score never yields `ok`. Fix anything missing. Write the checklist and results into `tasks/LOG.md`.
+3. **Rejection decoder** `/decode` (small): a textarea (paste a rejection/status message) → `ai.ts` `classifyRejection()` → ONE code from `rejectionCodes.ts` (zod enum) + confidence → fix steps from code (Assamese + English). `UNKNOWN` or confidence < 0.7 → "needs verification" + what to ask at the office. Mock the AI in tests. Link it from the home page ("Got a rejection? Decode it").
+4. **`npm run demo:reset`:** clears `data/kaagaz.db` proposals and versions back to the built-in v1 rule packs. Make sure the home page then lists only the 3 original schemes.
+5. Small polish only if time remains: 360px-width check, loading states.
+
+Do NOT build: voice, letter drafting, photo upload on /decode.
+
+**Done when:** 1–4 work; `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` pass; LOG.md updated; committed "T4: guardrails, admin passcode, decoder, demo reset".

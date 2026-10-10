@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import type { SchemeView } from "@/core/catalog";
 import { formatInr } from "@/core/reportView";
 import { STRINGS, type Lang } from "@/i18n";
@@ -17,6 +18,7 @@ export function SchemeStep({
 }) {
   const t = STRINGS[lang];
   return (
+    <>
     <ul className="flex flex-col gap-3">
       {catalog.map((s) => {
         const b = s.benefit;
@@ -51,5 +53,13 @@ export function SchemeStep({
         );
       })}
     </ul>
+    <Link
+      href="/decode"
+      className="flex min-h-12 items-center justify-between gap-2 rounded-2xl border-2 border-dashed border-amber-500 bg-amber-50 p-4 text-lg font-semibold text-amber-950 hover:border-amber-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+    >
+      <span>📩 {t.decode.homeLink}</span>
+      <span aria-hidden="true">→</span>
+    </Link>
+    </>
   );
 }

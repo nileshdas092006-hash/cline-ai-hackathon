@@ -8,6 +8,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { noticeFromDemoFile } from "@/core/notice";
 import { schemeHistories } from "@/server/adminApi";
+import { isAdminProtected } from "@/server/adminAuth";
 import { AdminApp, type DemoNotice } from "./AdminApp";
 
 export const metadata: Metadata = { title: "Rule Maintenance Agent · KaagazCheck" };
@@ -32,8 +33,10 @@ async function loadDemos(): Promise<DemoNotice[]> {
 
 async function LiveAdmin() {
   await connection(); // the history changes whenever someone publishes
-  const [demos, history] = await Promise.all([loadDemos(), Promise.resolve(schemeHistories())]);
-  return <AdminApp demos={demos} initialHistory={history} />;
+  // With ADMIN_PASSCODE set, the history is only sent after the passcode is checked by the API.
+  const locked = isAdminProtected();
+  const [demos, history] = await Promise.all([loadDemos(), Promise.resolve(locked ? [] : schemeHistories())]);
+  return <AdminApp demos={demos} initialHistory={history} passcodeRequired={locked} />;
 }
 
 export default function AdminPage() {

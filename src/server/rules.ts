@@ -6,7 +6,7 @@ import { z } from "zod";
 import { applyMergePatch } from "@/core/mergePatch";
 import { checkRulePolicy, checkTestPolicy } from "@/core/rulePolicy";
 import { RuleTestCase, runRuleTests, type TestReport } from "@/core/ruleTests";
-import { getScheme, registerScheme } from "@/core/schemes";
+import { getScheme, registerScheme, resetRegistry, runtimeVersionKeys } from "@/core/schemes";
 import { BUILTIN_REGRESSION_TESTS } from "@/core/schemes/regression";
 import { SchemeRule } from "@/core/types";
 import { getStore, type RuleStore, type RuleVersionRow } from "./store";
@@ -39,9 +39,16 @@ export class RuleService {
     private readonly now: () => string = () => new Date().toISOString(),
   ) {}
 
-  /** Registers every published version that the registry does not know yet. Idempotent. */
+  /**
+   * Registers every published version that the registry does not know yet. Idempotent.
+   * If the registry holds a version that is no longer published (after `npm run demo:reset`),
+   * it is rebuilt from the built-in packs first, so a running server drops it too.
+   */
   syncRegistry(): void {
-    for (const row of this.store.publishedVersions()) {
+    const published = this.store.publishedVersions();
+    const live = new Set(published.map((r) => `${r.schemeId}@${r.version}`));
+    if (runtimeVersionKeys().some((k) => !live.has(k))) resetRegistry();
+    for (const row of published) {
       if (!getScheme(row.schemeId, row.version)) registerScheme(row.rule);
     }
   }

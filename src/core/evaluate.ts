@@ -215,14 +215,17 @@ function ageCheck(scheme: SchemeRule, docs: readonly ExtractedDoc[], asOfDate: s
   if (!range) return null;
   const base = { id: "age", kind: "eligibility" as const, provenance: range.provenance };
   const src = DOC_LABELS[range.dobFrom];
+  // "40–79" or, with no upper limit, "60 or older" / "৬০ বা তাতকৈ বেছি".
+  const limitEn = range.max === undefined ? `${range.min} or older` : `${range.min}–${range.max}`;
+  const limitAs = range.max === undefined ? `${range.min} বা তাতকৈ বেছি` : `${range.min}–${range.max}`;
   const doc = findDoc(docs, range.dobFrom);
   const dob = doc?.fields.dob;
   const unsure = (en: string, as: string): Check => ({ ...base, result: "needs_verification", messageEn: en, messageAs: as, fixWhere: "applicant" });
 
   if (!doc || !dob) {
     return unsure(
-      `We need the date of birth from the ${src.en} to check the age limit (${range.min}–${range.max}).`,
-      `বয়সৰ সীমা (${range.min}–${range.max}) পৰীক্ষা কৰিবলৈ ${src.as}ৰ জন্মৰ তাৰিখ লাগিব।`,
+      `We need the date of birth from the ${src.en} to check the age limit (${limitEn}).`,
+      `বয়সৰ সীমা (${limitAs}) পৰীক্ষা কৰিবলৈ ${src.as}ৰ জন্মৰ তাৰিখ লাগিব।`,
     );
   }
   if (!isIsoDate(dob) || dob > asOfDate || isLowConfidence(doc, "dob")) {
@@ -232,25 +235,25 @@ function ageCheck(scheme: SchemeRule, docs: readonly ExtractedDoc[], asOfDate: s
     );
   }
   const age = ageOn(dob, asOfDate);
-  if (age >= range.min && age <= range.max) {
+  if (age >= range.min && (range.max === undefined || age <= range.max)) {
     return {
       ...base,
       result: "ok",
-      messageEn: `Age ${age} on ${asOfDate} is within ${range.min}–${range.max}.`,
-      messageAs: `${asOfDate} তাৰিখত বয়স ${age}, যি ${range.min}–${range.max}ৰ ভিতৰত।`,
+      messageEn: range.max === undefined ? `Age ${age} on ${asOfDate} is ${limitEn}.` : `Age ${age} on ${asOfDate} is within ${limitEn}.`,
+      messageAs: `${asOfDate} তাৰিখত বয়স ${age}, যি ${limitAs}ৰ ভিতৰত।`,
       fixWhere: "none",
     };
   }
-  const above = age > range.max;
+  const above = range.max !== undefined && age > range.max;
   const verifiedRule = range.provenance.status === "verified";
   return {
     ...base,
     result: verifiedRule ? "action_required" : "needs_verification",
     messageEn:
-      `Age ${age} on ${asOfDate} is outside the ${range.min}–${range.max} limit for this scheme.` +
+      `Age ${age} on ${asOfDate} is outside the ${limitEn} limit for this scheme.` +
       (above && range.aboveMaxHintEn ? ` ${range.aboveMaxHintEn}` : ""),
     messageAs:
-      `${asOfDate} তাৰিখত বয়স ${age}, যি এই আঁচনিৰ ${range.min}–${range.max} সীমাৰ বাহিৰত।` +
+      `${asOfDate} তাৰিখত বয়স ${age}, যি এই আঁচনিৰ ${limitAs} সীমাৰ বাহিৰত।` +
       (above && range.aboveMaxHintAs ? ` ${range.aboveMaxHintAs}` : ""),
     fixWhere: verifiedRule ? "none" : scheme.confirmAt,
   };

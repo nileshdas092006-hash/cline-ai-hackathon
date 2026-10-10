@@ -78,6 +78,18 @@ describe("RuleStore", () => {
     expect(store.get(999)).toBeUndefined();
   });
 
+  it("resetAll (demo:reset) removes every proposal and published version in one transaction", () => {
+    const a = store.saveProposal(proposal("2.1.0"), "2026-10-10T10:00:00.000Z");
+    store.setStatus(a.id, "published", "2026-10-10T10:05:00.000Z");
+    store.saveProposal(proposal("2.2.0"), "2026-10-10T10:06:00.000Z");
+    expect(store.resetAll()).toBe(2);
+    expect(store.list()).toEqual([]);
+    expect(store.publishedVersions()).toEqual([]);
+    expect(store.resetAll()).toBe(0); // idempotent
+    // ids start again from 1 (a clean demo), and the store still works
+    expect(store.saveProposal(proposal("2.1.0"), "2026-10-10T11:00:00.000Z").id).toBe(1);
+  });
+
   it("persists across connections", () => {
     const { id } = store.saveProposal(proposal("2.1.0"), "2026-10-10T10:00:00.000Z");
     store.setStatus(id, "published", "2026-10-10T10:05:00.000Z");
