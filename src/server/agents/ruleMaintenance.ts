@@ -14,7 +14,7 @@ import { runToolAgent, type ToolAgentDeps } from "../ai";
 import { getRuleService, type RuleService } from "../rules";
 import type { RuleVersionStatus } from "../store";
 
-export const RULE_AGENT_PROMPT_VERSION = "rule-agent-v1";
+export const RULE_AGENT_PROMPT_VERSION = "rule-agent-v2";
 
 export const SYSTEM_PROMPT = `You maintain the rule packs of KaagazCheck, a welfare-application checker for Assam, India.
 You receive the text of an official scheme notice or guideline. Turn it into a proposed rule-pack version, tested, for a human to approve.
@@ -32,6 +32,7 @@ Steps:
 
 Rules:
 - Never invent criteria, amounts, documents or dates that are not in the notice. If something is unclear or missing, leave it out and say so in a scheme note (notes) and in the summary.
+- ageRange.max is optional. If the notice gives no upper age limit (e.g. "60 years and above"), leave max out; never use a placeholder such as 120.
 - Provenance on every rule you add or change: sourceTitle, clause (quote or paraphrase the notice), effectiveDate if stated, verifiedOn = today's date given below, version = the new version.
   status "verified" ONLY with an official sourceUrl that appears in the notice text; otherwise status "provisional" with sourceUrl null (or the notice's URL if it is not official). Keep untouched provenance as it is.
 - Write Assamese (…As fields) in Assamese script (use ৰ and ৱ); it will be reviewed by a native speaker.

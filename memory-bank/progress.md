@@ -10,8 +10,11 @@
 
 - [x] T4 (trimmed): optional admin passcode (`ADMIN_PASSCODE` → `x-admin-passcode` on `/api/admin/*`; passcode box / "Demo mode: unprotected" banner), guardrails audit (`src/guardrails.test.ts`; cover sheet now prints source + verified on), rejection decoder `/decode` (`classifyRejection` in ai.ts → pure `decodeResult`, ≥ 0.7 or needs verification + what to ask), `npm run demo:reset`, optional `AgeRange.max`. 264 tests.
 
+- [x] T-last: agent prompt says `ageRange.max` may be left out (prompt `rule-agent-v2`, +1 test); full `README.md` (from `docs/README-draft.md`, every path/route/script checked; demo path; honest attribution); secret check clean; demo reset + test/typecheck/lint/build pass; tag `round2-final`. 265 tests.
+
 ## To do
-- [ ] T-last: freeze, full README, demo path check (incl. 360px + phone click-through of `/`, `/admin`, `/decode`)
+- [ ] Demo path check on a real phone (incl. 360px click-through of `/`, `/admin`, `/decode`); not possible from this environment.
+- [ ] Native-speaker review of the Assamese strings.
 
 ## Future scope
 - Age-banded payments (e.g. IGNOAPS ₹200 for 60–79, ₹500 for 80+): the engine has one flat benefit per scheme; would need benefit bands keyed by age. Not now (Claude, T4).
@@ -25,7 +28,7 @@
 - Route files omit `export const runtime = "nodejs"` (incompatible with `cacheComponents` in Next 16.4); approved by Claude in T3.
 - `/admin` is open unless `ADMIN_PASSCODE` is set in `.env.local` (then the API needs the passcode; the page shows a passcode box). Set it for any shared deployment.
 - The engine has one flat benefit amount per scheme, so IGNOAPS's ₹500/month for ages 80+ can only be a note (see Future scope).
-- The T3 agent prompt does not yet say that `ageRange.max` may be omitted (asked Claude).
+- The agent prompt's new "leave `ageRange.max` out" line (T-last) has not been tried against the live API yet.
 - A live agent run takes about 20–60 s; the UI streams each tool call so the wait is visible.
 - `npm install` warns that `protobufjs` (a dependency of `@cline/sdk`) has an unapproved postinstall script. Harmless; nothing is broken.
 - The transliteration table is basic (good enough for possible_match on common names; cross-script is never `same`).

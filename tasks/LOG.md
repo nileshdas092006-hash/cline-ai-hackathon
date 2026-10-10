@@ -222,3 +222,33 @@ Followed `tasks/NEXT.md` in order (items 1–4 done; item 5 only the loading sta
 - Should the T3 agent prompt mention that `ageRange.max` may now be omitted (instead of using 120)? `ruleMaintenance.ts` was out of scope, so I left it unchanged.
 - Age-banded payments are recorded as future scope in `memory-bank/progress.md`, as you asked.
 
+
+## T-last: README and freeze (run-173124-rw4j, 2026-10-10)
+
+**Code change (the only one allowed)**
+- `src/server/agents/ruleMaintenance.ts`: the agent prompt now says "ageRange.max is optional. If the notice gives no upper age limit (e.g. "60 years and above"), leave max out; never use a placeholder such as 120." `RULE_AGENT_PROMPT_VERSION` is now `rule-agent-v2`, because the prompt changed and the version is logged (rule 3).
+- `src/server/agents/ruleMaintenance.test.ts`: +1 test (written first and seen failing) that checks the prompt text and the version.
+
+**README.md**: replaced the placeholder with `docs/README-draft.md`, adjusted to what exists:
+- T4 row filled (`run-165739-gi16`: passcode, guardrails audit with 14 tests, decoder, demo reset; 264 tests) and a T-last row added (this run, 265 tests).
+- Every path, route, HTTP method and npm script in it was checked against the tree. Fixes to the draft: `cp` → `copy` (Windows, with a note for macOS/Linux); the Windows note quoted "AI unavailable", but the UI really says "Automatic reading is not available right now", so it now quotes that; the policy wording now matches `rulePolicy.ts` ("verified" only if it was carried over or its URL is in the notice; ≥ 3 tests with unique ids).
+- Added: a 3-minute demo path with the real button labels ("Use sample", "Load demo notice: Orunodoi October 2026", "Propose rule change", "Publish 2.1.0"), the 4 admin API routes, a folder table, the guardrails test, the passcode note, and no-key behaviour.
+- "Honest attribution" now says: all application code was written by Cline; Claude wrote specs and reviewed; Das drove decisions and reviewed the rules against government sources. "Limitations and future scope" is kept (+2 lines: no real-phone/360 px check yet; `/admin` open without `ADMIN_PASSCODE`).
+
+**Secrets**
+- `.env.example` already lists `CLINE_API_KEY=`, `CLINE_MODEL=`, `ADMIN_PASSCODE=` (plus optional `KAAGAZ_DB_PATH=`), all empty.
+- `git grep` for the real key (full value and its prefix, read from `.env.local` without printing it): 0 tracked files. The same check on every modified/untracked file in this commit (incl. `.cline-runs/*`): 0 hits. `git grep -E "CLINE_API_KEY=<value>"` and `"ADMIN_PASSCODE=<value>"`: no matches. `.env.local` is git-ignored (`.gitignore:36`).
+
+**Checks**
+- `npm run demo:reset`: removed 0 rule versions (the DB was already clean); only pm-kisan, orunodoi-3, nsap-widow remain.
+- `npm test`: 35 files, **265 passed, 0 failed** (264 + 1). `npm run typecheck`, `npm run lint`, `npm run build`: pass (exit 0).
+
+**Open issues**
+- Still no click-through on a real phone or at 360 px (no browser here); stated in the README limitations.
+- The Assamese strings still need native-speaker review.
+- The new prompt line was not run against the live API in this run (no new features, time box). The IGNOAPS demo notice is where it matters: the agent should now leave out `max` instead of using 120.
+- `tasks/NEXT.md`, `.cline-runs/index.md` and `.cline-runs/run-165739-gi16.log` were already modified before this run; I committed them as they were with `git add -A` and did not edit them.
+
+**Requests for Claude**
+- None blocking. If there is time before the demo, one live IGNOAPS run on `/admin` would confirm the agent leaves `ageRange.max` out (then `npm run demo:reset`).
+

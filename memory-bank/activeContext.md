@@ -1,6 +1,15 @@
 # Active context
 
-## Current state (after T4, trimmed)
+## Current state (after T-last: frozen, tagged `round2-final`)
+The project is frozen: bug fixes only. 265 tests pass; typecheck, lint and build are clean; the DB has been reset to the 3 built-in schemes.
+- `README.md` is the full project README (adapted from `docs/README-draft.md`; every path, route and script in it was checked). It has a 3-minute demo path with the real button labels, the Cline run table (T0–T-last) and the honest attribution (all application code by Cline).
+- The rule agent's prompt (`rule-agent-v2`) says `ageRange.max` is optional and must be left out when the notice has no upper limit (no 120 placeholder).
+- No secret is in any tracked file; `.env.example` lists `CLINE_API_KEY=`, `CLINE_MODEL=`, `ADMIN_PASSCODE=`, `KAAGAZ_DB_PATH=` with no values.
+
+## Next step
+Before the demo (people, not Cline): phone/360px click-through of `/`, `/admin`, `/decode`; native-speaker review of the Assamese; run `npm run demo:reset` right before presenting.
+
+## Previous state (after T4, trimmed)
 T4 is done (items 1–4; polish = loading state on `/` only). 264 tests pass; typecheck, lint and build are clean.
 - **Admin passcode:** optional `ADMIN_PASSCODE` in `.env.local`. When set, `/api/admin/*` needs the header `x-admin-passcode` (`src/server/adminAuth.ts`, 401 otherwise) and `/admin` shows a passcode box (kept in sessionStorage). When not set, `/admin` shows an amber "Demo mode: unprotected" banner.
 - **Guardrails audit:** `src/guardrails.test.ts` (renders ReportStep/CoverSheet/CheckItem to static HTML + scans the source). One fix: the printed cover sheet now prints "Source · verified on · Provisional rule" per listed check. The checklist is in `tasks/LOG.md`.
@@ -13,9 +22,6 @@ T4 is done (items 1–4; polish = loading state on `/` only). 264 tests pass; ty
 - The decoder's model only classifies; the status, steps and questions are code. A low-confidence guess is shown only as "It might be: … please confirm at the office".
 - `demo-reset.mjs` imports `src/server/store.ts` directly (Node 24 type stripping, `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON`) so `store.ts` stays the only DB writer.
 - The new Assamese strings (`decode.*`, `ASK_AT_OFFICE`, "বা তাতকৈ বেছি") are drafts.
-
-## Next step
-T-last: freeze, README (a `docs/README-draft.md` exists, not by Cline), demo path check incl. 360px + phone click-through of `/`, `/admin`, `/decode`; native-speaker review of the Assamese.
 
 ## Previous state (after T3)
 T3 is done: the **Rule Maintenance Agent** works end to end against the live Cline API. On `/admin` a maintainer pastes a notice or loads a demo notice. A `@cline/sdk` Agent works only through 5 tools (`getRuleSchema`, `getCurrentRule`, `proposeRule`, `runTests`, `saveProposal`), and the page shows a live tool-call log, a readable before/after diff, test results (new + regression), Publish / Reject, and version history per scheme. Published versions are live at once in `/` and `/api/check`, and the old versions are kept.

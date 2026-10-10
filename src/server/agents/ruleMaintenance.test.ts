@@ -61,6 +61,12 @@ function tools() {
 }
 
 describe("rule maintenance tools", () => {
+  it("the prompt says an upper age limit may be left out (no placeholder such as 120)", () => {
+    expect(mod.SYSTEM_PROMPT).toMatch(/ageRange\.max is optional/);
+    expect(mod.SYSTEM_PROMPT).toMatch(/leave max out/);
+    expect(mod.RULE_AGENT_PROMPT_VERSION).toBe("rule-agent-v2");
+  });
+
   it("exposes exactly the five tools, each with a JSON input schema", () => {
     const { list } = tools();
     expect(list.map((t) => t.name)).toEqual(["getRuleSchema", "getCurrentRule", "proposeRule", "runTests", "saveProposal"]);
